@@ -18,9 +18,14 @@ public class PlayerAttackHit : MonoBehaviour
     [Header("Stats")]
     [SerializeField] private PlayerStats playerStats;
 
-    private readonly Collider[] hitResults = new Collider[32];
-    private readonly HashSet<EnemyHealth> hitEnemies = new HashSet<EnemyHealth>();
-    private readonly HashSet<BossHealth> hitBosses = new HashSet<BossHealth>();
+    private readonly Collider[] hitResults =
+        new Collider[32];
+
+    private readonly HashSet<EnemyHealth> hitEnemies =
+        new HashSet<EnemyHealth>();
+
+    private readonly HashSet<BossHealth> hitBosses =
+        new HashSet<BossHealth>();
 
     private void Awake()
     {
@@ -30,15 +35,19 @@ public class PlayerAttackHit : MonoBehaviour
 
     public void DoHit()
     {
-        Vector3 center = hitOrigin.position + hitOrigin.forward * (hitRange * 0.5f);
+        Vector3 center =
+            hitOrigin.position +
+            hitOrigin.forward *
+            (hitRange * 0.5f);
 
-        int count = Physics.OverlapSphereNonAlloc(
-            center,
-            hitRadius,
-            hitResults,
-            enemyLayers,
-            QueryTriggerInteraction.Ignore
-        );
+        int count =
+            Physics.OverlapSphereNonAlloc(
+                center,
+                hitRadius,
+                hitResults,
+                enemyLayers,
+                QueryTriggerInteraction.Ignore
+            );
 
         if (count <= 0)
             return;
@@ -46,36 +55,64 @@ public class PlayerAttackHit : MonoBehaviour
         hitEnemies.Clear();
         hitBosses.Clear();
 
-        int bonusDamage = playerStats != null
-            ? playerStats.DamageBonusFromAttack
-            : 0;
+        int bonusDamage =
+            playerStats != null
+                ? playerStats
+                    .DamageBonusFromAttack
+                : 0;
 
-        int finalDamage = Mathf.Max(1, baseDamage + bonusDamage);
+        int finalDamage =
+            Mathf.Max(
+                1,
+                baseDamage + bonusDamage
+            );
+
         int appliedHits = 0;
 
-        for (int i = 0; i < count && appliedHits < maxHits; i++)
+        for (int i = 0;
+             i < count &&
+             appliedHits < maxHits;
+             i++)
         {
             Collider hit = hitResults[i];
+
             if (hit == null)
                 continue;
 
-            EnemyHealth enemyHealth = hit.GetComponentInParent<EnemyHealth>();
+            EnemyHealth enemyHealth =
+                hit.GetComponentInParent<
+                    EnemyHealth
+                >();
+
             if (enemyHealth != null)
             {
-                // 하나의 적이 여러 Collider를 가지고 있어도 한 번만 피해를 적용한다.
-                if (hitEnemies.Add(enemyHealth))
+                if (hitEnemies.Add(
+                        enemyHealth))
                 {
-                    enemyHealth.TakeDamage(finalDamage, transform.position, transform);
+                    enemyHealth.TakeDamage(
+                        finalDamage,
+                        transform
+                    );
+
                     appliedHits++;
                 }
 
                 continue;
             }
 
-            BossHealth bossHealth = hit.GetComponentInParent<BossHealth>();
-            if (bossHealth != null && hitBosses.Add(bossHealth))
+            BossHealth bossHealth =
+                hit.GetComponentInParent<
+                    BossHealth
+                >();
+
+            if (bossHealth != null &&
+                hitBosses.Add(
+                    bossHealth))
             {
-                bossHealth.TakeDamage(finalDamage);
+                bossHealth.TakeDamage(
+                    finalDamage
+                );
+
                 appliedHits++;
             }
         }
@@ -87,8 +124,15 @@ public class PlayerAttackHit : MonoBehaviour
         if (hitOrigin == null)
             return;
 
-        Vector3 center = hitOrigin.position + hitOrigin.forward * (hitRange * 0.5f);
-        Gizmos.DrawWireSphere(center, hitRadius);
+        Vector3 center =
+            hitOrigin.position +
+            hitOrigin.forward *
+            (hitRange * 0.5f);
+
+        Gizmos.DrawWireSphere(
+            center,
+            hitRadius
+        );
     }
 #endif
 }
