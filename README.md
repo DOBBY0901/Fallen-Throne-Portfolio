@@ -27,9 +27,10 @@
 - [**Equipment System**](Scripts/Equipment/README.md) — 장착/해제, 슬롯별 장비, 스탯 합산
 - [**UI System**](Scripts/UI/README.md) — 메뉴, QuickSlot, 상호작용 프롬프트, 보스 UI, 비동기 로딩
 - [**Map / Minimap**](Scripts/Map/README.md) — 적 위치 추적, 월드→UI 좌표 변환, 동적 아이콘 등록/해제
-- [**Interaction System**](Scripts/Interaction/README.md) — IInteractable 기반 월드 상호작용, 상자 보상, UI 연계
+- [**Interaction System**](Scripts/Interaction/README.md) — IInteractable 기반 월드 상호작용, 상자/체크포인트 연계
 - [**Environment System**](Scripts/Environment/README.md) — 지역 상태에 따른 파티클/Fog/조명/환경음/이동속도 전환
-- [**Trap System**](Scripts/Trap/README.md) — Emission 경고, 반복 화염 패턴, Burn 상태이상, 상자 보상과 함정 종료 연계
+- [**Trap System**](Scripts/Trap/README.md) — Emission 경고, 반복 화염 패턴, Burn 상태이상
+- [**Respawn System**](Scripts/Respawn/README.md) — 체크포인트 위치/회전/환경 상태 저장 및 사망 후 복구
 
 ## Core Implementation
 
@@ -97,10 +98,12 @@ LoadingSceneController → LoadingSceneUI → Async Scene Load
 PlayerInteraction
       ↓
  IInteractable
-      ↓
-ChestInteractable
-   ├─ DropTableSO → Inventory
-   └─ TrapManager.StopAllTraps()
+   ├───────────────┐
+   ↓               ↓
+ChestInteractable  RespawnStatueInteractable
+   │               │
+   ├─ Drop         └─ RespawnManager
+   └─ Trap Stop
 
 FlameTrap
    ↓ Warning / Danger
@@ -109,14 +112,13 @@ FlameDamageArea
 PlayerStatusEffect.ApplyBurn()
 ```
 
-- 상호작용 대상을 `IInteractable`로 추상화
-- 상자 오픈 연출과 실제 보상 지급 시점을 Coroutine으로 순서화
-- 기존 DropTable / Inventory 시스템을 재사용해 보상 로직 중복 최소화
-- 함정은 Idle → Warning → Danger → Flame 순서로 시각적 경고 후 활성화
+- Chest와 Respawn Statue가 동일한 IInteractable 계약을 재사용
+- 상자 보상은 DropTable / Inventory 시스템과 연결
+- FlameTrap은 Idle → Warning → Danger → Flame 순서로 시각적 경고 후 활성화
 - 실제 상태이상 적용은 FlameDamageArea로 분리하고 PlayerStatusEffect를 재사용
-- 상자 보상 획득 후 TrapManager를 통해 구역의 FlameTrap을 일괄 종료
+- 상자 보상 획득 후 TrapManager를 통해 구역 함정을 일괄 종료
 
-### Environment
+### Environment / Respawn
 
 ```text
 EnvironmentZone
@@ -127,13 +129,25 @@ EnvironmentController
    ├─ Lighting
    ├─ Ambient Audio
    └─ Player Move Multiplier
+
+RespawnStatueInteractable
+      ↓
+RespawnManager
+   ├─ Position
+   ├─ Rotation
+   └─ EnvironmentState
+      ↓
+PlayerHealth.Respawn()
+      ↓
+EnvironmentController.ForceApplyState()
 ```
 
 - Normal / Cave / StrongBlizzard / Castle 상태를 enum으로 관리
 - 상태 하나로 파티클, Fog, 조명, 환경음, 플레이어 이동속도를 동기화
 - Fog와 Lighting을 Coroutine으로 보간해 자연스럽게 전환
-- StrongBlizzard에서 이동속도 배율과 환경 효과를 변경
-- Trigger를 거치지 않는 이동을 위한 강제 상태 재적용 지원
+- 체크포인트 활성화 시 위치/회전뿐 아니라 EnvironmentState도 저장
+- 리스폰 직후 Trigger를 거치지 않아도 저장된 환경 상태를 강제로 복구
+- PlayerHealth는 체크포인트 데이터를 직접 소유하지 않고 RespawnManager를 통해 조회
 
 ### Map / Minimap
 - 적 Transform과 아이콘 RectTransform을 Dictionary로 연결
@@ -181,11 +195,12 @@ EnvironmentController
 - [LoadingSceneUI.cs](Scripts/UI/LoadingSceneUI.cs)
 - [MinimapEnemyIconManager.cs](Scripts/Map/MinimapEnemyIconManager.cs)
 
-### Interaction / Environment / Trap
+### Interaction / Environment / Trap / Respawn
 - [ChestInteractable.cs](Scripts/Interaction/ChestInteractable.cs)
 - [EnvironmentController.cs](Scripts/Environment/EnvironmentController.cs)
 - [FlameTrap.cs](Scripts/Trap/FlameTrap.cs)
-- [FlameDamageArea.cs](Scripts/Trap/FlameDamageArea.cs)
+- [RespawnManager.cs](Scripts/Respawn/RespawnManager.cs)
+- [RespawnStatueInteractable.cs](Scripts/Respawn/RespawnStatueInteractable.cs)
 
 ## Repository Structure
 
@@ -203,7 +218,8 @@ Fallen-Throne-Portfolio/
    ├─ Map/          Minimap / Enemy Icon Tracking
    ├─ Interaction/  Interface / World Interaction / Chest
    ├─ Environment/  State / Zone / Fog / Lighting / Weather
-   └─ Trap/         Warning / Flame / Burn / Trap Control
+   ├─ Trap/         Warning / Flame / Burn / Trap Control
+   └─ Respawn/      Checkpoint / Environment Restore
 ```
 
 각 폴더의 `README.md`에 시스템 흐름과 코드 리뷰 포인트를 별도로 정리했습니다.
@@ -220,5 +236,4 @@ Fallen-Throne-Portfolio/
 
 ## Status
 
-현재 **Player / Enemy / Boss / Item / Inventory / Equipment / UI / Map / Interaction / Environment / Trap** 핵심 코드 정리를 완료했습니다.  
-이후 Respawn 등 남은 영역도 같은 기준으로 필요한 코드만 선별해 추가할 예정입니다.
+현재 **Player / Enemy / Boss / Item / Inventory / Equipment / UI / Map / Interaction / Environment / Trap / Respawn** 핵심 코드 정리를 완료했습니다.
