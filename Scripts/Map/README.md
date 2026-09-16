@@ -5,22 +5,27 @@
 ## System Flow
 
 ```text
-Enemy Spawn
-    ↓
+Initial Enemy
+   ↓ Inspector List
 RegisterEnemy()
-    ↓
+
+Runtime Spawn
+EnemySpawnManager
+   ↓ Instantiate
+RegisterEnemy()
+   ↓
 MinimapEnemyIconManager
-    ↓
+   ↓
 Enemy World Position
-    ↓ relative to Player
+   ↓ relative to Player
 XZ Offset
-    ↓ worldToUiScale
+   ↓ worldToUiScale
 RectTransform.anchoredPosition
 
 Enemy Death
-    ↓
+   ↓ EnemyHealth
 UnregisterEnemy()
-    ↓
+   ↓
 Icon Destroy
 ```
 
@@ -33,14 +38,12 @@ Icon Destroy
 
 - `Transform → RectTransform` Dictionary로 적과 아이콘을 직접 매핑
 - 플레이어 기준 XZ 상대 좌표를 미니맵 UI 좌표로 변환
-- Orthographic Camera 크기와 UI 반경을 사용해 월드/UI 스케일 계산
-- 미니맵 범위 밖의 적 아이콘은 비활성화
-- Spawn 시 `RegisterEnemy`, Death 시 `UnregisterEnemy`로 동적 상태 동기화
-- EnemyHealth에서 사망 시 등록 해제할 수 있도록 전역 접근 지점을 제공
+- Orthographic Camera 크기와 UI 반경으로 월드/UI 스케일 계산
+- 미니맵 범위 밖의 적 아이콘 비활성화
+- 씬 초기 적과 런타임 Spawn 적을 모두 RegisterEnemy로 등록
+- EnemyHealth 사망 시 UnregisterEnemy를 호출해 아이콘 제거
 
 ## Excluded
-
-실제 프로젝트에서 사용되는 보조 스크립트 중 포트폴리오 코드 검토 기준에서 정보량이 낮은 코드는 제외했습니다.
 
 - **MinimapCameraFollow.cs** — 플레이어 위치를 따라가는 Top-down Camera 이동만 담당
 - **MinimapPlayerIcon.cs** — 플레이어 Y 회전값을 UI 아이콘 Z 회전으로 변환하는 단순 표시 코드
