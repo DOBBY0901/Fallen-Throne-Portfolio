@@ -67,10 +67,13 @@ public class BossHealth : MonoBehaviour
         OnHpChanged?.Invoke(currentHp, maxHp);
         bossHpUI?.UpdateHp(currentHp, maxHp);
 
-        patternController?.CheckHp(currentHp, maxHp);
-
         if (currentHp <= 0)
+        {
             Die();
+            return;
+        }
+
+        patternController?.CheckHp(currentHp, maxHp);
     }
 
     public void SetInvincible(bool value)
@@ -102,7 +105,6 @@ public class BossHealth : MonoBehaviour
             animator.SetTrigger(DieHash);
         }
 
-        if (bossHpUI != null)
-            bossHpUI.gameObject.SetActive(false);
+        bossHpUI?.EndBossFight();
     }
 }
