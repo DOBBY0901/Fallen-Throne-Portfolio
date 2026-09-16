@@ -23,21 +23,11 @@
 - [**Enemy AI**](Scripts/Enemy/README.md) — NavMesh 순찰, 시야 탐지, Chase/Attack 상태 전환, 인카운터
 - [**Boss System**](Scripts/Boss/README.md) — 기본 공격, HP Threshold 패턴, Slam/Rockfall, Flame Phase
 - [**Item System**](Scripts/Item/README.md) — ScriptableObject 데이터, ID Database, 사용 효과, Drop Table
+- [**Inventory System**](Scripts/Inventory/README.md) — 25 슬롯, 스택/수량 관리, 이벤트 기반 UI 동기화
 
 ## Core Implementation
 
 ### Player Combat
-
-```text
-Input
-  ↓
-PlayerCombat
-  ↓ Animation Event
-PlayerAttackHit
-  ↓
-EnemyHealth / BossHealth
-```
-
 - 입력 버퍼와 Animation Event를 사용한 3단 콤보
 - `OverlapSphereNonAlloc` 기반 근접 공격 판정
 - 장비 스탯을 반영한 데미지/방어 계산
@@ -45,13 +35,6 @@ EnemyHealth / BossHealth
 - 화상 및 넉백 등 전투 상태 처리
 
 ### Enemy AI
-
-```text
-Patrol
-  ↓ Detect
-Idle → Chase → Attack
-```
-
 - NavMesh 기반 랜덤 순찰
 - 거리, 시야각, Raycast 장애물 검사를 조합한 플레이어 탐지
 - 피격 시 공격자를 추적 대상으로 전환
@@ -59,39 +42,31 @@ Idle → Chase → Attack
 - Wolf 전용 Howl → Rush → ForceChase 인카운터
 
 ### Boss System
-
-```text
-BossAI
-  ↓
-BossHealth
-  ↓ HP Threshold
-BossPatternController
-  ├─ 70% → Slam → Rockfall
-  ├─ 50% → Flame Phase
-  └─ 30% → Slam → Rockfall
-```
-
 - 기본 공격과 특수 패턴 상태 분리
 - 특수 패턴 중 무적 및 AI 상태 제어
 - Root Motion 공격 전후 NavMeshAgent 동기화
 - Slam, Rockfall 패턴과 경고 지점 처리
 - 2페이즈 진입 시 보스 머티리얼과 전투 맵 전환
-- Flame Phase에서 공격 효과와 낙석 패턴 변화
 
-### Item System
+### Item & Inventory
 
 ```text
 ItemDataSO
-  ├─ ItemDatabaseSO
-  ├─ ItemEffectSO → ItemEffectRunner
-  └─ DropTableSO → Inventory
+   ↓
+ItemDatabaseSO
+   ↓
+Inventory
+   ↓ OnChanged
+InventoryUI
 ```
 
-- ScriptableObject 기반 아이템 데이터 정의
-- 문자열 ID → Dictionary 캐시 기반 빠른 데이터 조회
-- 추상 `ItemEffectSO`를 통한 사용 효과 확장
-- 한 아이템에 여러 사용 효과를 조합할 수 있는 구조
-- 확률/수량 기반 Drop Table과 Inventory 연계
+- ScriptableObject 기반 아이템 데이터와 사용 효과
+- ID 기반 Dictionary 캐시로 ItemData 조회
+- 기존 스택 우선 채우기 → 빈 슬롯 사용
+- 추가/제거 전 전체 공간 및 수량을 검사해 부분 처리 방지
+- 아이템 제거 후 슬롯 Compact
+- `OnChanged` 이벤트 기반 UI 갱신
+- 선택 슬롯의 ID로 ItemDatabase에서 상세 정보 조회
 
 ## Selected Code
 
@@ -100,13 +75,11 @@ ItemDataSO
 - [PlayerAttackHit.cs](Scripts/Player/PlayerAttackHit.cs)
 - [PlayerHealth.cs](Scripts/Player/PlayerHealth.cs)
 - [PlayerStats.cs](Scripts/Player/PlayerStats.cs)
-- [PlayerStatusEffect.cs](Scripts/Player/PlayerStatusEffect.cs)
 
 ### Enemy
 - [EnemyCombatAI.cs](Scripts/Enemy/EnemyCombatAI.cs)
 - [EnemyMove.cs](Scripts/Enemy/EnemyMove.cs)
 - [EnemyHealth.cs](Scripts/Enemy/EnemyHealth.cs)
-- [EnemySpawnSequence.cs](Scripts/Enemy/EnemySpawnSequence.cs)
 - [WolfEncounterSequence.cs](Scripts/Enemy/WolfEncounterSequence.cs)
 
 ### Boss
@@ -114,17 +87,15 @@ ItemDataSO
 - [BossHealth.cs](Scripts/Boss/BossHealth.cs)
 - [BossPatternController.cs](Scripts/Boss/BossPatternController.cs)
 - [BossPhaseController.cs](Scripts/Boss/BossPhaseController.cs)
-- [BossSlamAttack.cs](Scripts/Boss/BossSlamAttack.cs)
 - [BossRockFallPattern.cs](Scripts/Boss/BossRockFallPattern.cs)
 
-### Item
+### Item / Inventory
 - [ItemDataSO.cs](Scripts/Item/ItemDataSO.cs)
 - [ItemDatabaseSO.cs](Scripts/Item/ItemDatabaseSO.cs)
 - [ItemEffectSO.cs](Scripts/Item/ItemEffectSO.cs)
-- [ItemEffectRunner.cs](Scripts/Item/ItemEffectRunner.cs)
-- [HealHpPercentEffectSO.cs](Scripts/Item/HealHpPercentEffectSO.cs)
 - [DropTableSO.cs](Scripts/Item/DropTableSO.cs)
-- [EnemyDropToInventory.cs](Scripts/Item/EnemyDropToInventory.cs)
+- [Inventory.cs](Scripts/Inventory/Inventory.cs)
+- [InventoryUI.cs](Scripts/Inventory/InventoryUI.cs)
 
 ## Repository Structure
 
@@ -141,9 +112,12 @@ Fallen-Throne-Portfolio/
    ├─ Boss/
    │  ├─ README.md
    │  └─ AI / Phase / Pattern / Attack
-   └─ Item/
+   ├─ Item/
+   │  ├─ README.md
+   │  └─ Data / Database / Effects / Drop
+   └─ Inventory/
       ├─ README.md
-      └─ Data / Database / Effects / Drop
+      └─ Inventory / UI / Slot UI
 ```
 
 ## Repository Notice
@@ -158,5 +132,5 @@ Fallen-Throne-Portfolio/
 
 ## Status
 
-현재 **Player / Enemy / Boss / Item** 핵심 코드 정리를 완료했습니다.  
-이후 Inventory, Interaction, Environment, UI 영역도 같은 기준으로 필요한 코드만 선별해 추가할 예정입니다.
+현재 **Player / Enemy / Boss / Item / Inventory** 핵심 코드 정리를 완료했습니다.  
+이후 Interaction, Environment, UI 영역도 같은 기준으로 필요한 코드만 선별해 추가할 예정입니다.
