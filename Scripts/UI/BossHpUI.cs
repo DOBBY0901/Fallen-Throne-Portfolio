@@ -34,6 +34,7 @@ public class BossHpUI : MonoBehaviour
     public void EndBossFight()
     {
         IsBossFightActive = false;
+        SetInvincibleUI(false);
         gameObject.SetActive(false);
     }
 
