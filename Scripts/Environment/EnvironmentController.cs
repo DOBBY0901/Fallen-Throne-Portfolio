@@ -78,13 +78,33 @@ public class EnvironmentController : MonoBehaviour
     private Coroutine lightCoroutine;
 
     private float defaultFogDensity;
+    private bool initialized;
 
     private void Awake()
     {
-        RenderSettings.fog = useFog;
         defaultFogDensity = RenderSettings.fogDensity;
+        initialized = true;
+    }
 
-        ApplyState(currentState);
+    private void OnEnable()
+    {
+        if (initialized)
+            ApplyState(currentState);
+    }
+
+    private void OnDisable()
+    {
+        if (fogCoroutine != null)
+        {
+            StopCoroutine(fogCoroutine);
+            fogCoroutine = null;
+        }
+
+        if (lightCoroutine != null)
+        {
+            StopCoroutine(lightCoroutine);
+            lightCoroutine = null;
+        }
     }
 
     public void SetEnvironmentState(EnvironmentState newState)
@@ -93,7 +113,9 @@ public class EnvironmentController : MonoBehaviour
             return;
 
         currentState = newState;
-        ApplyState(currentState);
+
+        if (isActiveAndEnabled)
+            ApplyState(currentState);
     }
 
     public void EnterZone(
@@ -104,9 +126,7 @@ public class EnvironmentController : MonoBehaviour
             return;
 
         RemoveActiveZone(zone);
-        activeZones.Add(
-            new ActiveZone(zone, state)
-        );
+        activeZones.Add(new ActiveZone(zone, state));
 
         SetEnvironmentState(state);
     }
@@ -128,11 +148,12 @@ public class EnvironmentController : MonoBehaviour
 
     public void ForceApplyState(EnvironmentState state)
     {
-        // 순간이동/리스폰 시 이전 Trigger 기록이 남지 않도록 초기화한다.
         activeZones.Clear();
 
         currentState = state;
-        ApplyState(currentState);
+
+        if (isActiveAndEnabled)
+            ApplyState(currentState);
     }
 
     private void RemoveActiveZone(EnvironmentZone zone)
@@ -146,6 +167,9 @@ public class EnvironmentController : MonoBehaviour
 
     private void ApplyState(EnvironmentState state)
     {
+        if (!isActiveAndEnabled)
+            return;
+
         UpdateParticles(state);
         UpdatePlayerSpeed(state);
         UpdateAmbientAudio(state);
@@ -185,9 +209,7 @@ public class EnvironmentController : MonoBehaviour
                 ? strongBlizzardMoveSpeedMultiplier
                 : normalMoveSpeedMultiplier;
 
-        playerController.SetEnvironmentMoveMultiplier(
-            multiplier
-        );
+        playerController.SetEnvironmentMoveMultiplier(multiplier);
     }
 
     private void UpdateAmbientAudio(EnvironmentState state)
@@ -207,17 +229,10 @@ public class EnvironmentController : MonoBehaviour
 
         float targetDensity = state switch
         {
-            EnvironmentState.Cave =>
-                caveFogDensity,
-
-            EnvironmentState.Castle =>
-                caveFogDensity,
-
-            EnvironmentState.StrongBlizzard =>
-                strongBlizzardFogDensity,
-
-            _ =>
-                defaultFogDensity
+            EnvironmentState.Cave => caveFogDensity,
+            EnvironmentState.Castle => caveFogDensity,
+            EnvironmentState.StrongBlizzard => strongBlizzardFogDensity,
+            _ => defaultFogDensity
         };
 
         StartFogTransition(targetDensity);
@@ -274,34 +289,24 @@ public class EnvironmentController : MonoBehaviour
             fogCoroutine = null;
         }
 
-        if (fogLerpSpeed <= 0f)
+        if (!isActiveAndEnabled || fogLerpSpeed <= 0f)
         {
-            RenderSettings.fogDensity =
-                targetDensity;
-
+            RenderSettings.fogDensity = targetDensity;
             return;
         }
 
         fogCoroutine =
-            StartCoroutine(
-                FogDensityTransition(
-                    targetDensity
-                )
-            );
+            StartCoroutine(FogDensityTransition(targetDensity));
     }
 
-    private IEnumerator FogDensityTransition(
-        float targetDensity)
+    private IEnumerator FogDensityTransition(float targetDensity)
     {
-        float startDensity =
-            RenderSettings.fogDensity;
-
+        float startDensity = RenderSettings.fogDensity;
         float t = 0f;
 
         while (t < 1f)
         {
-            t += Time.deltaTime *
-                fogLerpSpeed;
+            t += Time.deltaTime * fogLerpSpeed;
 
             RenderSettings.fogDensity =
                 Mathf.Lerp(
@@ -313,9 +318,7 @@ public class EnvironmentController : MonoBehaviour
             yield return null;
         }
 
-        RenderSettings.fogDensity =
-            targetDensity;
-
+        RenderSettings.fogDensity = targetDensity;
         fogCoroutine = null;
     }
 
@@ -326,7 +329,7 @@ public class EnvironmentController : MonoBehaviour
         Color targetAmbientColor,
         AmbientMode targetAmbientMode)
     {
-        if (lightLerpSpeed <= 0f)
+        if (!isActiveAndEnabled || lightLerpSpeed <= 0f)
         {
             ApplyLightingImmediately(
                 targetSunIntensity,
@@ -359,9 +362,7 @@ public class EnvironmentController : MonoBehaviour
         AmbientMode targetAmbientMode)
     {
         float startSunIntensity =
-            sunLight != null
-                ? sunLight.intensity
-                : 0f;
+            sunLight != null ? sunLight.intensity : 0f;
 
         float startAmbientIntensity =
             RenderSettings.ambientIntensity;
@@ -376,11 +377,8 @@ public class EnvironmentController : MonoBehaviour
 
         while (t < 1f)
         {
-            t += Time.deltaTime *
-                lightLerpSpeed;
-
-            float progress =
-                Mathf.Clamp01(t);
+            t += Time.deltaTime * lightLerpSpeed;
+            float progress = Mathf.Clamp01(t);
 
             if (sunLight != null)
             {
@@ -437,36 +435,24 @@ public class EnvironmentController : MonoBehaviour
         if (sunLight != null)
             sunLight.intensity = sunIntensity;
 
-        RenderSettings.ambientIntensity =
-            ambientIntensity;
-
-        RenderSettings.reflectionIntensity =
-            reflectionIntensity;
-
-        RenderSettings.ambientLight =
-            ambientColor;
-
-        RenderSettings.ambientMode =
-            ambientMode;
+        RenderSettings.ambientIntensity = ambientIntensity;
+        RenderSettings.reflectionIntensity = reflectionIntensity;
+        RenderSettings.ambientLight = ambientColor;
+        RenderSettings.ambientMode = ambientMode;
     }
 
-    private static void PlayParticle(
-        ParticleSystem particle)
+    private static void PlayParticle(ParticleSystem particle)
     {
-        if (particle == null)
+        if (particle == null || !particle.gameObject.activeInHierarchy)
             return;
-
-        if (!particle.gameObject.activeSelf)
-            particle.gameObject.SetActive(true);
 
         particle.Clear();
         particle.Play();
     }
 
-    private static void StopParticle(
-        ParticleSystem particle)
+    private static void StopParticle(ParticleSystem particle)
     {
-        if (particle == null)
+        if (particle == null || !particle.gameObject.activeInHierarchy)
             return;
 
         particle.Stop(
