@@ -27,6 +27,8 @@
 - [**Equipment System**](Scripts/Equipment/README.md) — 장착/해제, 슬롯별 장비, 스탯 합산
 - [**UI System**](Scripts/UI/README.md) — 메뉴, QuickSlot, 상호작용 프롬프트, 보스 UI, 비동기 로딩
 - [**Map / Minimap**](Scripts/Map/README.md) — 적 위치 추적, 월드→UI 좌표 변환, 동적 아이콘 등록/해제
+- [**Interaction System**](Scripts/Interaction/README.md) — IInteractable 기반 월드 상호작용, 상자 보상, UI 연계
+- [**Environment System**](Scripts/Environment/README.md) — 지역 상태에 따른 파티클/Fog/조명/환경음/이동속도 전환
 
 ## Core Implementation
 
@@ -86,6 +88,43 @@ LoadingSceneController → LoadingSceneUI → Async Scene Load
 - 상호작용 요청자를 owner로 관리하는 World/Screen Prompt UI
 - `WorldToScreenPoint` 기반 월드 상호작용 키 표시
 - AsyncOperation 실제 진행률과 표시 진행률을 분리한 로딩 화면
+
+### Interaction
+
+```text
+PlayerInteraction
+      ↓
+ IInteractable
+      ↓
+ChestInteractable
+   ├─ InteractionUIManager
+   ├─ DropTableSO → Inventory
+   └─ TrapManager
+```
+
+- 상호작용 대상을 `IInteractable`로 추상화
+- 상호작용 오브젝트가 입력을 직접 처리하지 않고 PlayerInteraction에 자신을 등록
+- UI 프롬프트와 상자 오픈 연출, 보상 지급을 하나의 Coroutine 흐름으로 연결
+- 기존 DropTable / Inventory 시스템을 재사용해 보상 로직 중복 최소화
+
+### Environment
+
+```text
+EnvironmentZone
+      ↓
+EnvironmentController
+   ├─ Particle
+   ├─ Fog
+   ├─ Lighting
+   ├─ Ambient Audio
+   └─ Player Move Multiplier
+```
+
+- Normal / Cave / StrongBlizzard / Castle 상태를 enum으로 관리
+- 상태 하나로 파티클, Fog, 조명, 환경음, 플레이어 이동속도를 동기화
+- Fog와 Lighting을 Coroutine으로 보간해 자연스럽게 전환
+- StrongBlizzard에서 이동속도 배율과 환경 효과를 변경
+- Trigger를 거치지 않는 이동을 위한 강제 상태 재적용 지원
 
 ### Map / Minimap
 
@@ -149,6 +188,12 @@ UnregisterEnemy()
 - [LoadingSceneUI.cs](Scripts/UI/LoadingSceneUI.cs)
 - [MinimapEnemyIconManager.cs](Scripts/Map/MinimapEnemyIconManager.cs)
 
+### Interaction / Environment
+- [ChestInteractable.cs](Scripts/Interaction/ChestInteractable.cs)
+- [IInteractable.cs](Scripts/Interaction/IInteractable.cs)
+- [EnvironmentController.cs](Scripts/Environment/EnvironmentController.cs)
+- [EnvironmentZone.cs](Scripts/Environment/EnvironmentZone.cs)
+
 ## Repository Structure
 
 ```text
@@ -161,8 +206,10 @@ Fallen-Throne-Portfolio/
    ├─ Item/         Data / Database / Effects / Drop
    ├─ Inventory/    Slot / Stack / Inventory UI
    ├─ Equipment/    Equip / Stats / Select UI
-   ├─ UI/           Menu / QuickSlot / Interaction / Loading
-   └─ Map/          Minimap / Enemy Icon Tracking
+   ├─ UI/           Menu / QuickSlot / Interaction UI / Loading
+   ├─ Map/          Minimap / Enemy Icon Tracking
+   ├─ Interaction/  Interface / World Interaction / Chest
+   └─ Environment/  State / Zone / Fog / Lighting / Weather
 ```
 
 각 폴더의 `README.md`에 시스템 흐름과 코드 리뷰 포인트를 별도로 정리했습니다.
@@ -179,5 +226,5 @@ Fallen-Throne-Portfolio/
 
 ## Status
 
-현재 **Player / Enemy / Boss / Item / Inventory / Equipment / UI / Map** 핵심 코드 정리를 완료했습니다.  
-이후 Interaction, Environment 영역도 같은 기준으로 필요한 코드만 선별해 추가할 예정입니다.
+현재 **Player / Enemy / Boss / Item / Inventory / Equipment / UI / Map / Interaction / Environment** 핵심 코드 정리를 완료했습니다.  
+이후 Trap, Respawn 등 남은 영역도 같은 기준으로 필요한 코드만 선별해 추가할 예정입니다.
