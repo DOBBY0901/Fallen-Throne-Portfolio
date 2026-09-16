@@ -11,9 +11,12 @@ public class EnemySpawnManager : MonoBehaviour
     [SerializeField] private bool spawnOnlyOnce = true;
 
     private bool hasSpawned;
-    private readonly List<GameObject> spawnedEnemies = new List<GameObject>();
 
-    public IReadOnlyList<GameObject> SpawnedEnemies => spawnedEnemies;
+    private readonly List<GameObject> spawnedEnemies =
+        new List<GameObject>();
+
+    public IReadOnlyList<GameObject> SpawnedEnemies =>
+        spawnedEnemies;
 
     public void SpawnEnemies()
     {
@@ -37,6 +40,9 @@ public class EnemySpawnManager : MonoBehaviour
             );
 
             spawnedEnemies.Add(enemy);
+
+            MinimapEnemyIconManager.Instance
+                ?.RegisterEnemy(enemy.transform);
         }
     }
 }
