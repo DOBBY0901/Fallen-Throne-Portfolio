@@ -26,6 +26,7 @@
 - [**Inventory System**](Scripts/Inventory/README.md) — 슬롯, 스택/수량 관리, 이벤트 기반 UI
 - [**Equipment System**](Scripts/Equipment/README.md) — 장착/해제, 슬롯별 장비, 스탯 합산
 - [**UI System**](Scripts/UI/README.md) — 메뉴, QuickSlot, 상호작용 프롬프트, 보스 UI, 비동기 로딩
+- [**Map / Minimap**](Scripts/Map/README.md) — 적 위치 추적, 월드→UI 좌표 변환, 동적 아이콘 등록/해제
 
 ## Core Implementation
 
@@ -86,6 +87,30 @@ LoadingSceneController → LoadingSceneUI → Async Scene Load
 - `WorldToScreenPoint` 기반 월드 상호작용 키 표시
 - AsyncOperation 실제 진행률과 표시 진행률을 분리한 로딩 화면
 
+### Map / Minimap
+
+```text
+Enemy Spawn
+    ↓
+RegisterEnemy()
+    ↓
+Enemy World Position
+    ↓ relative to Player
+XZ Offset
+    ↓
+Minimap UI Position
+
+Enemy Death
+    ↓
+UnregisterEnemy()
+```
+
+- 적 Transform과 아이콘 RectTransform을 Dictionary로 연결
+- 플레이어 기준 상대 XZ 좌표를 UI 좌표로 변환
+- Orthographic Camera 크기와 UI 반경을 이용한 스케일 계산
+- 범위 밖 적 아이콘 비활성화
+- Spawn / Death 흐름과 미니맵 아이콘 상태 동기화
+
 ## Selected Code
 
 ### Player
@@ -115,13 +140,14 @@ LoadingSceneController → LoadingSceneUI → Async Scene Load
 - [Inventory.cs](Scripts/Inventory/Inventory.cs)
 - [InventoryUI.cs](Scripts/Inventory/InventoryUI.cs)
 
-### Equipment / UI
+### Equipment / UI / Map
 - [EquipmentManager.cs](Scripts/Equipment/EquipmentManager.cs)
 - [EquipmentSelectPopup.cs](Scripts/Equipment/EquipmentSelectPopup.cs)
 - [MenuManager.cs](Scripts/UI/MenuManager.cs)
 - [QuickSlotGameInput.cs](Scripts/UI/QuickSlotGameInput.cs)
 - [InteractionUIManager.cs](Scripts/UI/InteractionUIManager.cs)
 - [LoadingSceneUI.cs](Scripts/UI/LoadingSceneUI.cs)
+- [MinimapEnemyIconManager.cs](Scripts/Map/MinimapEnemyIconManager.cs)
 
 ## Repository Structure
 
@@ -135,7 +161,8 @@ Fallen-Throne-Portfolio/
    ├─ Item/         Data / Database / Effects / Drop
    ├─ Inventory/    Slot / Stack / Inventory UI
    ├─ Equipment/    Equip / Stats / Select UI
-   └─ UI/           Menu / QuickSlot / Interaction / Loading
+   ├─ UI/           Menu / QuickSlot / Interaction / Loading
+   └─ Map/          Minimap / Enemy Icon Tracking
 ```
 
 각 폴더의 `README.md`에 시스템 흐름과 코드 리뷰 포인트를 별도로 정리했습니다.
@@ -147,10 +174,10 @@ Fallen-Throne-Portfolio/
 대용량 모델, 텍스처, 애니메이션, 오디오 및 외부 에셋은  
 **용량 및 라이선스 문제로 포함하지 않습니다.**
 
-또한 포트폴리오 코드 검토와 직접적인 관련이 낮은 단순 Trigger, Hotkey Wrapper, 표시 전용 UI, 설정 화면 등은 일부 제외했습니다.  
+또한 포트폴리오 코드 검토와 직접적인 관련이 낮은 단순 Trigger, Hotkey Wrapper, 표시 전용 UI, 설정 화면, 단순 Camera Follow 코드는 일부 제외했습니다.  
 핵심 구현 흐름과 코드 설계를 빠르게 확인할 수 있도록 선별한 저장소입니다.
 
 ## Status
 
-현재 **Player / Enemy / Boss / Item / Inventory / Equipment / UI** 핵심 코드 정리를 완료했습니다.  
+현재 **Player / Enemy / Boss / Item / Inventory / Equipment / UI / Map** 핵심 코드 정리를 완료했습니다.  
 이후 Interaction, Environment 영역도 같은 기준으로 필요한 코드만 선별해 추가할 예정입니다.
