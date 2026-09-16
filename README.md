@@ -28,9 +28,10 @@
 - Patrol → Chase → Attack 상태 기반 적 AI
 - 시야각, 거리, 장애물 기반 플레이어 감지
 - NavMesh 기반 이동
-- 피격 및 사망 처리
-- 보스 패턴 및 페이즈 전환
-- Ground Slam, Rockfall 등 보스 공격 패턴
+- 보스 기본 공격 / 특수 패턴 상태 제어
+- HP 구간 기반 패턴 전환
+- Ground Slam / Rockfall / Flame Phase 패턴
+- Root Motion과 NavMeshAgent 상태 동기화
 
 ### Game Systems
 - Inventory / Item / Equipment 시스템
@@ -70,6 +71,21 @@
 - [WolfEncounterSequence.cs](Scripts/Enemy/WolfEncounterSequence.cs) — 하울링 → 돌진 → 강제 추적으로 이어지는 인카운터 연출
 - [WolfEncounterTrigger.cs](Scripts/Enemy/WolfEncounterTrigger.cs) — 플레이어 진입 시 늑대 인카운터 시작
 
+### Boss
+
+- [BossAI.cs](Scripts/Boss/BossAI.cs) — 추적, 기본 공격, 특수 패턴 상태 제어와 Root Motion/NavMesh 동기화
+- [BossBasicAttack.cs](Scripts/Boss/BossBasicAttack.cs) — Animation Event 기반 근접 공격 판정, 넉백, 2페이즈 화상 연계
+- [BossHealth.cs](Scripts/Boss/BossHealth.cs) — 보스 체력, 무적 상태, 패턴 체크, 사망 처리
+- [BossPatternController.cs](Scripts/Boss/BossPatternController.cs) — HP 70%/50%/30% 구간 기반 패턴 큐와 무적 상태 관리
+- [BossPhaseController.cs](Scripts/Boss/BossPhaseController.cs) — Roar 연출 이후 화염 페이즈 및 맵/머티리얼 전환
+- [BossSlamAttack.cs](Scripts/Boss/BossSlamAttack.cs) — Slam 범위 공격, 페이즈별 VFX/SFX, 넉백/화상 처리
+- [BossRockFallPattern.cs](Scripts/Boss/BossRockFallPattern.cs) — 경고 지점 생성 후 랜덤 낙석을 반복하는 Coroutine 패턴
+- [BossRock.cs](Scripts/Boss/BossRock.cs) — 낙석 충돌 피해, 넉백, 화상, 경고 오브젝트 정리
+- [BossRoomFlameFloor.cs](Scripts/Boss/BossRoomFlameFloor.cs) — 화염 지형 진입 시 상태이상 적용
+- [FogWallInteractable.cs](Scripts/Boss/FogWallInteractable.cs) — 보스룸 진입, 퇴로 차단, HP UI 표시, 전투 시작
+- [RiseFromGround.cs](Scripts/Boss/RiseFromGround.cs) — 흔들림 후 지면에서 상승하는 보스 등장 연출
+- [WarningCirclePulse.cs](Scripts/Boss/WarningCirclePulse.cs) — 낙석 경고 원의 Emission Pulse 연출
+
 ## Repository Structure
 
 ```text
@@ -77,24 +93,20 @@ Fallen-Throne-Portfolio/
 ├─ README.md
 ├─ Scripts/
 │  ├─ Player/
-│  │  ├─ PlayerCombat.cs
-│  │  ├─ PlayerAttackHit.cs
-│  │  ├─ PlayerCombatState.cs
-│  │  ├─ PlayerHealth.cs
-│  │  ├─ PlayerStats.cs
-│  │  └─ PlayerStatusEffect.cs
 │  ├─ Enemy/
-│  │  ├─ EnemyMove.cs
-│  │  ├─ EnemyCombatAI.cs
-│  │  ├─ EnemyHealth.cs
-│  │  ├─ EnemyHitReaction.cs
-│  │  ├─ EnemyHpBarUI.cs
-│  │  ├─ EnemySpawnManager.cs
-│  │  ├─ EnemySpawnTrigger.cs
-│  │  ├─ EnemySpawnSequence.cs
-│  │  ├─ WolfEncounterSequence.cs
-│  │  └─ WolfEncounterTrigger.cs
 │  ├─ Boss/
+│  │  ├─ BossAI.cs
+│  │  ├─ BossBasicAttack.cs
+│  │  ├─ BossHealth.cs
+│  │  ├─ BossPatternController.cs
+│  │  ├─ BossPhaseController.cs
+│  │  ├─ BossSlamAttack.cs
+│  │  ├─ BossRockFallPattern.cs
+│  │  ├─ BossRock.cs
+│  │  ├─ BossRoomFlameFloor.cs
+│  │  ├─ FogWallInteractable.cs
+│  │  ├─ RiseFromGround.cs
+│  │  └─ WarningCirclePulse.cs
 │  ├─ Item/
 │  ├─ Interaction/
 │  ├─ Map/
@@ -112,7 +124,8 @@ Fallen-Throne-Portfolio/
 - **Combat** — 입력, 콤보 진행, 공격 판정
 - **Enemy AI** — 감지, 추적, 공격 상태 전환
 - **Enemy Encounter** — Spawn, 등장 연출, 강제 추적 전환
-- **Boss** — 패턴 실행 및 페이즈 관리
+- **Boss AI** — 기본 공격과 특수 패턴 상태 분리, Root Motion 처리
+- **Boss Pattern** — HP Threshold, Slam → Rockfall, Flame Phase 전환
 - **Inventory** — 아이템 데이터와 인벤토리 상태 관리
 - **Environment** — 지역에 따른 환경 상태 전환
 - **UI** — 게임 데이터와 UI 동기화
@@ -129,4 +142,4 @@ Fallen-Throne-Portfolio/
 
 ## Status
 
-현재 Player와 Enemy 영역의 핵심 코드 정리를 완료했으며, Boss, Inventory, Environment 코드를 순차적으로 추가할 예정입니다.
+현재 Player, Enemy, Boss 영역의 핵심 코드 정리를 완료했으며, Inventory, Interaction, Environment, UI 코드를 순차적으로 추가할 예정입니다.
