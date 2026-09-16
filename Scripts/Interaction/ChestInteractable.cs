@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class ChestInteractable : MonoBehaviour, IInteractable
@@ -12,7 +13,6 @@ public class ChestInteractable : MonoBehaviour, IInteractable
 
     [Header("Loot")]
     [SerializeField] private DropTableSO chestDropTable;
-    [SerializeField] private ItemDatabaseSO database;
     [SerializeField] private Inventory inventory;
 
     [Header("World")]
@@ -20,7 +20,8 @@ public class ChestInteractable : MonoBehaviour, IInteractable
 
     [Header("Interaction")]
     [SerializeField] private float interactDistance = 2f;
-    [SerializeField] private string openAnimationName = "ChestAnim";
+    [SerializeField] private string openAnimationName =
+        "ChestAnim";
 
     [Header("Presentation")]
     [SerializeField] private float maxLightIntensity = 5f;
@@ -29,8 +30,12 @@ public class ChestInteractable : MonoBehaviour, IInteractable
 
     private PlayerInteraction playerInteraction;
 
+    private List<(ItemDataSO data, int amount)>
+        preparedLoot;
+
     private bool isOpened;
     private bool isOpening;
+    private bool lootRolled;
     private bool hasDropped;
 
     private void Start()
@@ -55,9 +60,19 @@ public class ChestInteractable : MonoBehaviour, IInteractable
         UpdateInteractionPrompt();
     }
 
+    private void OnDisable()
+    {
+        ClearInteractionPrompt();
+    }
+
     public void Interact()
     {
         if (isOpened || isOpening)
+            return;
+
+        // 보상을 전부 수용할 공간이 있을 때만 상자를 연다.
+        // 부족하면 같은 드롭 결과를 유지한 채 다시 시도할 수 있다.
+        if (!PrepareLoot())
             return;
 
         ClearInteractionPrompt();
@@ -70,21 +85,40 @@ public class ChestInteractable : MonoBehaviour, IInteractable
 
         PlayOpenPresentation();
 
-        float animationLength = GetOpenAnimationLength();
+        float animationLength =
+            GetOpenAnimationLength();
 
         if (animationLength > 0f)
-            yield return new WaitForSeconds(animationLength);
+        {
+            yield return new WaitForSeconds(
+                animationLength
+            );
+        }
 
-        yield return FadeLight(0f, maxLightIntensity);
+        yield return FadeLight(
+            0f,
+            maxLightIntensity
+        );
 
-        DropLootOnce();
+        if (!GrantPreparedLoot())
+        {
+            isOpening = false;
+            yield break;
+        }
+
         trapManager?.StopAllTraps();
 
         if (lightDuration > 0f)
-            yield return new WaitForSeconds(lightDuration);
+        {
+            yield return new WaitForSeconds(
+                lightDuration
+            );
+        }
 
         yield return FadeLight(
-            chestLight != null ? chestLight.intensity : 0f,
+            chestLight != null
+                ? chestLight.intensity
+                : 0f,
             0f
         );
 
@@ -95,12 +129,59 @@ public class ChestInteractable : MonoBehaviour, IInteractable
         isOpening = false;
     }
 
+    private bool PrepareLoot()
+    {
+        if (hasDropped)
+            return true;
+
+        if (chestDropTable == null ||
+            inventory == null)
+        {
+            return false;
+        }
+
+        if (!lootRolled)
+        {
+            preparedLoot = chestDropTable.Roll();
+            lootRolled = true;
+        }
+
+        if (preparedLoot == null ||
+            preparedLoot.Count == 0)
+        {
+            return true;
+        }
+
+        return inventory.CanAddItems(preparedLoot);
+    }
+
+    private bool GrantPreparedLoot()
+    {
+        if (hasDropped)
+            return true;
+
+        if (preparedLoot == null ||
+            preparedLoot.Count == 0)
+        {
+            hasDropped = true;
+            return true;
+        }
+
+        if (!inventory.AddItems(preparedLoot))
+            return false;
+
+        hasDropped = true;
+        return true;
+    }
+
     private void PlayOpenPresentation()
     {
         if (chestAnimation != null &&
             !string.IsNullOrEmpty(openAnimationName))
         {
-            chestAnimation.Play(openAnimationName);
+            chestAnimation.Play(
+                openAnimationName
+            );
         }
 
         if (chestOpenSfx != null)
@@ -123,7 +204,9 @@ public class ChestInteractable : MonoBehaviour, IInteractable
         AnimationState state =
             chestAnimation[openAnimationName];
 
-        return state != null ? state.length : 0f;
+        return state != null
+            ? state.length
+            : 0f;
     }
 
     private IEnumerator FadeLight(
@@ -137,13 +220,17 @@ public class ChestInteractable : MonoBehaviour, IInteractable
 
         if (lightFadeSpeed <= 0f)
         {
-            chestLight.intensity = targetIntensity;
+            chestLight.intensity =
+                targetIntensity;
+
             yield break;
         }
 
         float duration =
-            Mathf.Abs(targetIntensity - startIntensity) /
-            lightFadeSpeed;
+            Mathf.Abs(
+                targetIntensity -
+                startIntensity
+            ) / lightFadeSpeed;
 
         float elapsed = 0f;
 
@@ -151,46 +238,25 @@ public class ChestInteractable : MonoBehaviour, IInteractable
         {
             elapsed += Time.deltaTime;
 
-            float t = duration <= 0f
-                ? 1f
-                : Mathf.Clamp01(elapsed / duration);
+            float t =
+                duration <= 0f
+                    ? 1f
+                    : Mathf.Clamp01(
+                        elapsed / duration
+                    );
 
             chestLight.intensity =
-                Mathf.Lerp(startIntensity, targetIntensity, t);
+                Mathf.Lerp(
+                    startIntensity,
+                    targetIntensity,
+                    t
+                );
 
             yield return null;
         }
 
-        chestLight.intensity = targetIntensity;
-    }
-
-    private void DropLootOnce()
-    {
-        if (hasDropped)
-            return;
-
-        if (chestDropTable == null ||
-            database == null ||
-            inventory == null)
-        {
-            return;
-        }
-
-        hasDropped = true;
-
-        var rolledItems = chestDropTable.Roll();
-
-        foreach (var (data, amount) in rolledItems)
-        {
-            if (data == null || amount <= 0)
-                continue;
-
-            inventory.AddItem(
-                database,
-                data.Id,
-                amount
-            );
-        }
+        chestLight.intensity =
+            targetIntensity;
     }
 
     private void UpdateInteractionPrompt()
@@ -201,23 +267,31 @@ public class ChestInteractable : MonoBehaviour, IInteractable
             return;
         }
 
-        if (player == null || hudPosition == null)
-            return;
-
-        float distance =
-            Vector3.Distance(
-                player.position,
-                hudPosition.position
-            );
-
-        if (distance <= interactDistance)
+        if (player == null ||
+            hudPosition == null)
         {
-            InteractionUIManager.Instance?.ShowWorldKey(
-                this,
-                hudPosition
-            );
+            return;
+        }
 
-            playerInteraction?.SetInteractable(this);
+        Vector3 offset =
+            player.position -
+            hudPosition.position;
+
+        bool isInRange =
+            offset.sqrMagnitude <=
+            interactDistance *
+            interactDistance;
+
+        if (isInRange)
+        {
+            InteractionUIManager.Instance
+                ?.ShowWorldKey(
+                    this,
+                    hudPosition
+                );
+
+            playerInteraction
+                ?.SetInteractable(this);
         }
         else
         {
@@ -227,16 +301,31 @@ public class ChestInteractable : MonoBehaviour, IInteractable
 
     private void ClearInteractionPrompt()
     {
-        InteractionUIManager.Instance?.HideWorldKey(this);
-        playerInteraction?.ClearInteractable(this);
+        InteractionUIManager.Instance
+            ?.HideWorldKey(this);
+
+        playerInteraction
+            ?.ClearInteractable(this);
     }
 
     private void ResolvePlayer()
     {
         if (player == null)
-            player = GameObject.FindGameObjectWithTag("Player")?.transform;
+        {
+            player =
+                GameObject
+                    .FindGameObjectWithTag(
+                        "Player"
+                    )
+                    ?.transform;
+        }
 
         if (player != null)
-            playerInteraction = player.GetComponent<PlayerInteraction>();
+        {
+            playerInteraction =
+                player.GetComponent<
+                    PlayerInteraction
+                >();
+        }
     }
 }
