@@ -25,7 +25,7 @@
 - [**Item System**](Scripts/Item/README.md) — ScriptableObject 데이터, ID Database, 사용 효과, Drop Table
 - [**Inventory System**](Scripts/Inventory/README.md) — 슬롯, 스택/수량 관리, 이벤트 기반 UI
 - [**Equipment System**](Scripts/Equipment/README.md) — 장착/해제, 슬롯별 장비, 스탯 합산
-- [**UI System**](Scripts/UI/README.md) — 메뉴 상태 관리, QuickSlot 등록/사용/HUD/쿨타임
+- [**UI System**](Scripts/UI/README.md) — 메뉴, QuickSlot, 상호작용 프롬프트, 보스 UI, 비동기 로딩
 
 ## Core Implementation
 
@@ -65,27 +65,26 @@ InventoryUI       PlayerStats / UI
 - 장착 장비의 EquipmentStat 합산
 - 장착 교체 실패 시 Inventory 롤백 처리
 
-### Quick Slot / Menu UI
+### UI / Quick Slot / Loading
 
 ```text
-InventoryUI
-   ↓
-QuickSlotAssignPopup
-   ↓
-QuickSlotManager
-   ├─ QuickSlotHUD
-   └─ QuickSlotGameInput
-          ↓
-    ItemEffectRunner
-          ↓
-      Inventory
+InventoryUI → QuickSlotManager → QuickSlotHUD
+                    ↓
+             QuickSlotGameInput
+                    ↓
+              ItemEffectRunner
+
+IInteractable → InteractionUIManager
+LoadingSceneController → LoadingSceneUI → Async Scene Load
 ```
 
 - QuickSlot에는 ItemData 전체가 아닌 Item ID만 저장
 - Inventory / QuickSlot 이벤트 기반 HUD 갱신
 - 실제 효과 적용 성공 시에만 소비 아이템 차감
-- 아이템별 쿨타임 관리 및 Radial UI 표시
 - 메뉴 오픈 시 플레이어 입력/커서/HUD/TimeScale 상태 제어
+- 상호작용 요청자를 owner로 관리하는 World/Screen Prompt UI
+- `WorldToScreenPoint` 기반 월드 상호작용 키 표시
+- AsyncOperation 실제 진행률과 표시 진행률을 분리한 로딩 화면
 
 ## Selected Code
 
@@ -120,9 +119,9 @@ QuickSlotManager
 - [EquipmentManager.cs](Scripts/Equipment/EquipmentManager.cs)
 - [EquipmentSelectPopup.cs](Scripts/Equipment/EquipmentSelectPopup.cs)
 - [MenuManager.cs](Scripts/UI/MenuManager.cs)
-- [QuickSlotManager.cs](Scripts/UI/QuickSlotManager.cs)
 - [QuickSlotGameInput.cs](Scripts/UI/QuickSlotGameInput.cs)
-- [QuickSlotHUD.cs](Scripts/UI/QuickSlotHUD.cs)
+- [InteractionUIManager.cs](Scripts/UI/InteractionUIManager.cs)
+- [LoadingSceneUI.cs](Scripts/UI/LoadingSceneUI.cs)
 
 ## Repository Structure
 
@@ -136,7 +135,7 @@ Fallen-Throne-Portfolio/
    ├─ Item/         Data / Database / Effects / Drop
    ├─ Inventory/    Slot / Stack / Inventory UI
    ├─ Equipment/    Equip / Stats / Select UI
-   └─ UI/           Menu / QuickSlot / HUD
+   └─ UI/           Menu / QuickSlot / Interaction / Loading
 ```
 
 각 폴더의 `README.md`에 시스템 흐름과 코드 리뷰 포인트를 별도로 정리했습니다.
