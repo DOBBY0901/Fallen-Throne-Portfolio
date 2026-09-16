@@ -6,7 +6,8 @@ public class RespawnManager : MonoBehaviour
 
     [Header("Default Respawn")]
     [SerializeField] private Transform defaultRespawnPoint;
-    [SerializeField] private EnvironmentController.EnvironmentState
+    [SerializeField] private
+        EnvironmentController.EnvironmentState
         defaultEnvironmentState =
             EnvironmentController.EnvironmentState.Normal;
 
@@ -21,7 +22,8 @@ public class RespawnManager : MonoBehaviour
 
     private void Awake()
     {
-        if (Instance != null && Instance != this)
+        if (Instance != null &&
+            Instance != this)
         {
             Destroy(gameObject);
             return;
@@ -29,13 +31,18 @@ public class RespawnManager : MonoBehaviour
 
         Instance = this;
 
-        currentRespawnPoint = defaultRespawnPoint;
-        currentEnvironmentState = defaultEnvironmentState;
+        currentRespawnPoint =
+            defaultRespawnPoint;
+
+        currentEnvironmentState =
+            defaultEnvironmentState;
 
         if (environmentController == null)
         {
             environmentController =
-                FindFirstObjectByType<EnvironmentController>();
+                FindFirstObjectByType<
+                    EnvironmentController
+                >();
         }
     }
 
@@ -65,22 +72,29 @@ public class RespawnManager : MonoBehaviour
             return;
 
         currentStatue.SetAura(true);
+
         currentEnvironmentState =
             currentStatue.EnvironmentState;
     }
 
-    public Vector3 GetRespawnPosition()
+    public bool TryGetRespawnPose(
+        out Vector3 position,
+        out Quaternion rotation)
     {
-        return currentRespawnPoint != null
-            ? currentRespawnPoint.position
-            : Vector3.zero;
-    }
+        if (currentRespawnPoint == null)
+        {
+            position = default;
+            rotation = Quaternion.identity;
+            return false;
+        }
 
-    public Quaternion GetRespawnRotation()
-    {
-        return currentRespawnPoint != null
-            ? currentRespawnPoint.rotation
-            : Quaternion.identity;
+        position =
+            currentRespawnPoint.position;
+
+        rotation =
+            currentRespawnPoint.rotation;
+
+        return true;
     }
 
     public EnvironmentController.EnvironmentState
@@ -91,8 +105,9 @@ public class RespawnManager : MonoBehaviour
 
     public void ApplyRespawnEnvironment()
     {
-        environmentController?.ForceApplyState(
-            currentEnvironmentState
-        );
+        environmentController
+            ?.ForceApplyState(
+                currentEnvironmentState
+            );
     }
 }
