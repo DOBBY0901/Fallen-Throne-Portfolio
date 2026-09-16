@@ -48,7 +48,7 @@
 
 ## Current Code Samples
 
-현재 Player 영역의 핵심 코드를 포트폴리오용으로 정리해 공개하고 있습니다.
+### Player
 
 - [PlayerCombat.cs](Scripts/Player/PlayerCombat.cs) — 콤보 입력 버퍼, Animation Event 기반 콤보 윈도우, 공격 상태 제어
 - [PlayerAttackHit.cs](Scripts/Player/PlayerAttackHit.cs) — NonAlloc 공격 판정, 중복 타격 방지, 일반 적/보스 피해 처리
@@ -56,6 +56,19 @@
 - [PlayerHealth.cs](Scripts/Player/PlayerHealth.cs) — 체력, 방어 보정, 사망, UI, 체크포인트 리스폰 흐름
 - [PlayerStats.cs](Scripts/Player/PlayerStats.cs) — 장비 스탯 반영 및 최종 능력치 계산
 - [PlayerStatusEffect.cs](Scripts/Player/PlayerStatusEffect.cs) — Coroutine 기반 화상 지속 피해
+
+### Enemy
+
+- [EnemyMove.cs](Scripts/Enemy/EnemyMove.cs) — NavMesh 기반 순찰, 랜덤 목적지 선택, 도착 후 대기
+- [EnemyCombatAI.cs](Scripts/Enemy/EnemyCombatAI.cs) — 시야각/거리/장애물 탐지, Idle → Chase → Attack 상태 전환, 공격 판정
+- [EnemyHealth.cs](Scripts/Enemy/EnemyHealth.cs) — 체력, 피격, 사망, 드롭, 미니맵 등록 해제, 지연 제거
+- [EnemyHitReaction.cs](Scripts/Enemy/EnemyHitReaction.cs) — 피격 애니메이션, VFX, SFX 피드백
+- [EnemyHpBarUI.cs](Scripts/Enemy/EnemyHpBarUI.cs) — 이벤트 기반 적 체력 UI 동기화
+- [EnemySpawnManager.cs](Scripts/Enemy/EnemySpawnManager.cs) — 지정 Spawn Point 기반 적 생성 및 생성 목록 관리
+- [EnemySpawnTrigger.cs](Scripts/Enemy/EnemySpawnTrigger.cs) — 플레이어 진입 기반 1회성 적 생성 트리거
+- [EnemySpawnSequence.cs](Scripts/Enemy/EnemySpawnSequence.cs) — 등장 연출 중 AI/NavMesh 비활성화 후 전투 상태 복귀
+- [WolfEncounterSequence.cs](Scripts/Enemy/WolfEncounterSequence.cs) — 하울링 → 돌진 → 강제 추적으로 이어지는 인카운터 연출
+- [WolfEncounterTrigger.cs](Scripts/Enemy/WolfEncounterTrigger.cs) — 플레이어 진입 시 늑대 인카운터 시작
 
 ## Repository Structure
 
@@ -71,6 +84,16 @@ Fallen-Throne-Portfolio/
 │  │  ├─ PlayerStats.cs
 │  │  └─ PlayerStatusEffect.cs
 │  ├─ Enemy/
+│  │  ├─ EnemyMove.cs
+│  │  ├─ EnemyCombatAI.cs
+│  │  ├─ EnemyHealth.cs
+│  │  ├─ EnemyHitReaction.cs
+│  │  ├─ EnemyHpBarUI.cs
+│  │  ├─ EnemySpawnManager.cs
+│  │  ├─ EnemySpawnTrigger.cs
+│  │  ├─ EnemySpawnSequence.cs
+│  │  ├─ WolfEncounterSequence.cs
+│  │  └─ WolfEncounterTrigger.cs
 │  ├─ Boss/
 │  ├─ Item/
 │  ├─ Interaction/
@@ -88,6 +111,7 @@ Fallen-Throne-Portfolio/
 
 - **Combat** — 입력, 콤보 진행, 공격 판정
 - **Enemy AI** — 감지, 추적, 공격 상태 전환
+- **Enemy Encounter** — Spawn, 등장 연출, 강제 추적 전환
 - **Boss** — 패턴 실행 및 페이즈 관리
 - **Inventory** — 아이템 데이터와 인벤토리 상태 관리
 - **Environment** — 지역에 따른 환경 상태 전환
@@ -105,4 +129,4 @@ Fallen-Throne-Portfolio/
 
 ## Status
 
-현재 Player 영역의 핵심 코드 정리를 완료했으며, Enemy AI, Boss, Inventory, Environment 코드를 순차적으로 추가할 예정입니다.
+현재 Player와 Enemy 영역의 핵심 코드 정리를 완료했으며, Boss, Inventory, Environment 코드를 순차적으로 추가할 예정입니다.
