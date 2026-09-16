@@ -23,6 +23,7 @@ public class PlayerHealth : MonoBehaviour
     private Animator animator;
     private PlayerHitReaction hitReaction;
     private PlayerCombatState combatState;
+    private PlayerStatusEffect statusEffect;
 
     private bool isDead;
 
@@ -43,10 +44,20 @@ public class PlayerHealth : MonoBehaviour
     {
         CurrentHP = maxHP;
 
-        animator = GetComponentInChildren<Animator>();
-        controller = GetComponent<ThirdPersonController>();
-        hitReaction = GetComponent<PlayerHitReaction>();
-        combatState = GetComponent<PlayerCombatState>();
+        animator =
+            GetComponentInChildren<Animator>();
+
+        controller =
+            GetComponent<ThirdPersonController>();
+
+        hitReaction =
+            GetComponent<PlayerHitReaction>();
+
+        combatState =
+            GetComponent<PlayerCombatState>();
+
+        statusEffect =
+            GetComponent<PlayerStatusEffect>();
 
         if (playerInput == null)
             playerInput = GetComponent<PlayerInput>();
@@ -57,7 +68,10 @@ public class PlayerHealth : MonoBehaviour
 
     private void Start()
     {
-        OnHpChanged?.Invoke(CurrentHP, maxHP);
+        OnHpChanged?.Invoke(
+            CurrentHP,
+            maxHP
+        );
     }
 
     public void Heal(int amount)
@@ -66,9 +80,16 @@ public class PlayerHealth : MonoBehaviour
             return;
 
         CurrentHP =
-            Mathf.Clamp(CurrentHP + amount, 0, maxHP);
+            Mathf.Clamp(
+                CurrentHP + amount,
+                0,
+                maxHP
+            );
 
-        OnHpChanged?.Invoke(CurrentHP, maxHP);
+        OnHpChanged?.Invoke(
+            CurrentHP,
+            maxHP
+        );
     }
 
     public bool TakeDamage(int damage)
@@ -76,21 +97,35 @@ public class PlayerHealth : MonoBehaviour
         if (isDead)
             return false;
 
-        if (controller != null && controller._isRolling)
+        if (controller != null &&
+            controller._isRolling)
+        {
             return false;
+        }
 
         int defenseReduction =
             playerStats != null
-                ? playerStats.DamageReductionFromDefense
+                ? playerStats
+                    .DamageReductionFromDefense
                 : 0;
 
         int finalDamage =
-            Mathf.Max(1, damage - defenseReduction);
+            Mathf.Max(
+                1,
+                damage - defenseReduction
+            );
 
         CurrentHP =
-            Mathf.Clamp(CurrentHP - finalDamage, 0, maxHP);
+            Mathf.Clamp(
+                CurrentHP - finalDamage,
+                0,
+                maxHP
+            );
 
-        OnHpChanged?.Invoke(CurrentHP, maxHP);
+        OnHpChanged?.Invoke(
+            CurrentHP,
+            maxHP
+        );
 
         if (CurrentHP <= 0)
         {
@@ -98,7 +133,7 @@ public class PlayerHealth : MonoBehaviour
             return true;
         }
 
-        hitReaction?.PlayHitFeedback(transform.position);
+        hitReaction?.PlayHitFeedback();
         combatState?.EnterCombat();
 
         return true;
@@ -111,6 +146,9 @@ public class PlayerHealth : MonoBehaviour
 
         isDead = true;
 
+        statusEffect?.ClearAllEffects();
+        combatState?.ExitCombat();
+
         if (controller != null)
             controller.enabled = false;
 
@@ -119,11 +157,12 @@ public class PlayerHealth : MonoBehaviour
 
         if (deathSfx != null)
         {
-            AudioManager.Instance?.Play3DSfx(
-                deathSfx,
-                transform.position,
-                deathVolume
-            );
+            AudioManager.Instance
+                ?.Play3DSfx(
+                    deathSfx,
+                    transform.position,
+                    deathVolume
+                );
         }
 
         if (animator != null)
@@ -132,9 +171,10 @@ public class PlayerHealth : MonoBehaviour
         if (deathPanel != null)
             deathPanel.SetActive(true);
 
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
+        Cursor.lockState =
+            CursorLockMode.None;
 
+        Cursor.visible = true;
         Time.timeScale = 0f;
     }
 
@@ -146,30 +186,47 @@ public class PlayerHealth : MonoBehaviour
         if (respawnManager == null)
             return;
 
+        if (!respawnManager.TryGetRespawnPose(
+                out Vector3 respawnPosition,
+                out Quaternion respawnRotation))
+        {
+            return;
+        }
+
         Time.timeScale = 1f;
 
         CharacterController characterController =
             GetComponent<CharacterController>();
 
         if (characterController != null)
-            characterController.enabled = false;
+        {
+            characterController.enabled =
+                false;
+        }
 
         transform.SetPositionAndRotation(
-            respawnManager.GetRespawnPosition(),
-            respawnManager.GetRespawnRotation()
+            respawnPosition,
+            respawnRotation
         );
 
         Physics.SyncTransforms();
 
-        respawnManager.ApplyRespawnEnvironment();
+        respawnManager
+            .ApplyRespawnEnvironment();
 
         if (characterController != null)
-            characterController.enabled = true;
+        {
+            characterController.enabled =
+                true;
+        }
 
         CurrentHP = maxHP;
         isDead = false;
 
-        OnHpChanged?.Invoke(CurrentHP, maxHP);
+        OnHpChanged?.Invoke(
+            CurrentHP,
+            maxHP
+        );
 
         if (animator != null)
         {
@@ -186,7 +243,9 @@ public class PlayerHealth : MonoBehaviour
         if (deathPanel != null)
             deathPanel.SetActive(false);
 
-        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.lockState =
+            CursorLockMode.Locked;
+
         Cursor.visible = false;
     }
 }
