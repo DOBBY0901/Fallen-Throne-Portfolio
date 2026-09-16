@@ -46,20 +46,36 @@
 - 사망 패널 및 Respawn 흐름
 - 게임 상태와 연동되는 UI 갱신
 
-## Repository Structure
+## Current Code Samples
 
-아래 구조를 기준으로 포트폴리오용 코드를 순차적으로 정리할 예정입니다.
+현재 Player 영역의 핵심 코드를 포트폴리오용으로 정리해 공개하고 있습니다.
+
+- [PlayerCombat.cs](Scripts/Player/PlayerCombat.cs) — 콤보 입력 버퍼, Animation Event 기반 콤보 윈도우, 공격 상태 제어
+- [PlayerAttackHit.cs](Scripts/Player/PlayerAttackHit.cs) — NonAlloc 공격 판정, 중복 타격 방지, 일반 적/보스 피해 처리
+- [PlayerCombatState.cs](Scripts/Player/PlayerCombatState.cs) — 전투 상태 진입 및 자동 해제
+- [PlayerHealth.cs](Scripts/Player/PlayerHealth.cs) — 체력, 방어 보정, 사망, UI, 체크포인트 리스폰 흐름
+- [PlayerStats.cs](Scripts/Player/PlayerStats.cs) — 장비 스탯 반영 및 최종 능력치 계산
+- [PlayerStatusEffect.cs](Scripts/Player/PlayerStatusEffect.cs) — Coroutine 기반 화상 지속 피해
+
+## Repository Structure
 
 ```text
 Fallen-Throne-Portfolio/
 ├─ README.md
 ├─ Scripts/
 │  ├─ Player/
-│  ├─ Combat/
-│  ├─ EnemyAI/
+│  │  ├─ PlayerCombat.cs
+│  │  ├─ PlayerAttackHit.cs
+│  │  ├─ PlayerCombatState.cs
+│  │  ├─ PlayerHealth.cs
+│  │  ├─ PlayerStats.cs
+│  │  └─ PlayerStatusEffect.cs
+│  ├─ Enemy/
 │  ├─ Boss/
-│  ├─ Inventory/
-│  ├─ Environment/
+│  ├─ Item/
+│  ├─ Interaction/
+│  ├─ Map/
+│  ├─ Trap/
 │  └─ UI/
 └─ Docs/
    ├─ Screenshots/
@@ -89,4 +105,4 @@ Fallen-Throne-Portfolio/
 
 ## Status
 
-현재 포트폴리오용 코드와 문서를 정리하여 순차적으로 업로드하고 있습니다.
+현재 Player 영역의 핵심 코드 정리를 완료했으며, Enemy AI, Boss, Inventory, Environment 코드를 순차적으로 추가할 예정입니다.
