@@ -29,6 +29,7 @@
 - [**Map / Minimap**](Scripts/Map/README.md) — 적 위치 추적, 월드→UI 좌표 변환, 동적 아이콘 등록/해제
 - [**Interaction System**](Scripts/Interaction/README.md) — IInteractable 기반 월드 상호작용, 상자 보상, UI 연계
 - [**Environment System**](Scripts/Environment/README.md) — 지역 상태에 따른 파티클/Fog/조명/환경음/이동속도 전환
+- [**Trap System**](Scripts/Trap/README.md) — Emission 경고, 반복 화염 패턴, Burn 상태이상, 상자 보상과 함정 종료 연계
 
 ## Core Implementation
 
@@ -37,6 +38,7 @@
 - `OverlapSphereNonAlloc` 기반 근접 공격 판정
 - 장비 스탯을 반영한 데미지/방어 계산
 - 사망 → 입력 차단 → 체크포인트 Respawn 흐름
+- 보스/함정에서 전달되는 Burn 상태이상을 PlayerStatusEffect에서 공통 처리
 
 ### Enemy AI
 - NavMesh 기반 랜덤 순찰
@@ -89,7 +91,7 @@ LoadingSceneController → LoadingSceneUI → Async Scene Load
 - `WorldToScreenPoint` 기반 월드 상호작용 키 표시
 - AsyncOperation 실제 진행률과 표시 진행률을 분리한 로딩 화면
 
-### Interaction
+### Interaction / Trap
 
 ```text
 PlayerInteraction
@@ -97,15 +99,22 @@ PlayerInteraction
  IInteractable
       ↓
 ChestInteractable
-   ├─ InteractionUIManager
    ├─ DropTableSO → Inventory
-   └─ TrapManager
+   └─ TrapManager.StopAllTraps()
+
+FlameTrap
+   ↓ Warning / Danger
+FlameDamageArea
+   ↓
+PlayerStatusEffect.ApplyBurn()
 ```
 
 - 상호작용 대상을 `IInteractable`로 추상화
-- 상호작용 오브젝트가 입력을 직접 처리하지 않고 PlayerInteraction에 자신을 등록
-- UI 프롬프트와 상자 오픈 연출, 보상 지급을 하나의 Coroutine 흐름으로 연결
+- 상자 오픈 연출과 실제 보상 지급 시점을 Coroutine으로 순서화
 - 기존 DropTable / Inventory 시스템을 재사용해 보상 로직 중복 최소화
+- 함정은 Idle → Warning → Danger → Flame 순서로 시각적 경고 후 활성화
+- 실제 상태이상 적용은 FlameDamageArea로 분리하고 PlayerStatusEffect를 재사용
+- 상자 보상 획득 후 TrapManager를 통해 구역의 FlameTrap을 일괄 종료
 
 ### Environment
 
@@ -127,23 +136,6 @@ EnvironmentController
 - Trigger를 거치지 않는 이동을 위한 강제 상태 재적용 지원
 
 ### Map / Minimap
-
-```text
-Enemy Spawn
-    ↓
-RegisterEnemy()
-    ↓
-Enemy World Position
-    ↓ relative to Player
-XZ Offset
-    ↓
-Minimap UI Position
-
-Enemy Death
-    ↓
-UnregisterEnemy()
-```
-
 - 적 Transform과 아이콘 RectTransform을 Dictionary로 연결
 - 플레이어 기준 상대 XZ 좌표를 UI 좌표로 변환
 - Orthographic Camera 크기와 UI 반경을 이용한 스케일 계산
@@ -157,6 +149,7 @@ UnregisterEnemy()
 - [PlayerAttackHit.cs](Scripts/Player/PlayerAttackHit.cs)
 - [PlayerHealth.cs](Scripts/Player/PlayerHealth.cs)
 - [PlayerStats.cs](Scripts/Player/PlayerStats.cs)
+- [PlayerStatusEffect.cs](Scripts/Player/PlayerStatusEffect.cs)
 
 ### Enemy
 - [EnemyCombatAI.cs](Scripts/Enemy/EnemyCombatAI.cs)
@@ -188,11 +181,11 @@ UnregisterEnemy()
 - [LoadingSceneUI.cs](Scripts/UI/LoadingSceneUI.cs)
 - [MinimapEnemyIconManager.cs](Scripts/Map/MinimapEnemyIconManager.cs)
 
-### Interaction / Environment
+### Interaction / Environment / Trap
 - [ChestInteractable.cs](Scripts/Interaction/ChestInteractable.cs)
-- [IInteractable.cs](Scripts/Interaction/IInteractable.cs)
 - [EnvironmentController.cs](Scripts/Environment/EnvironmentController.cs)
-- [EnvironmentZone.cs](Scripts/Environment/EnvironmentZone.cs)
+- [FlameTrap.cs](Scripts/Trap/FlameTrap.cs)
+- [FlameDamageArea.cs](Scripts/Trap/FlameDamageArea.cs)
 
 ## Repository Structure
 
@@ -200,7 +193,7 @@ UnregisterEnemy()
 Fallen-Throne-Portfolio/
 ├─ README.md
 └─ Scripts/
-   ├─ Player/       Combat / Health / Stats
+   ├─ Player/       Combat / Health / Stats / Status Effect
    ├─ Enemy/        AI / Spawn / Encounter
    ├─ Boss/         AI / Phase / Pattern / Attack
    ├─ Item/         Data / Database / Effects / Drop
@@ -209,7 +202,8 @@ Fallen-Throne-Portfolio/
    ├─ UI/           Menu / QuickSlot / Interaction UI / Loading
    ├─ Map/          Minimap / Enemy Icon Tracking
    ├─ Interaction/  Interface / World Interaction / Chest
-   └─ Environment/  State / Zone / Fog / Lighting / Weather
+   ├─ Environment/  State / Zone / Fog / Lighting / Weather
+   └─ Trap/         Warning / Flame / Burn / Trap Control
 ```
 
 각 폴더의 `README.md`에 시스템 흐름과 코드 리뷰 포인트를 별도로 정리했습니다.
@@ -226,5 +220,5 @@ Fallen-Throne-Portfolio/
 
 ## Status
 
-현재 **Player / Enemy / Boss / Item / Inventory / Equipment / UI / Map / Interaction / Environment** 핵심 코드 정리를 완료했습니다.  
-이후 Trap, Respawn 등 남은 영역도 같은 기준으로 필요한 코드만 선별해 추가할 예정입니다.
+현재 **Player / Enemy / Boss / Item / Inventory / Equipment / UI / Map / Interaction / Environment / Trap** 핵심 코드 정리를 완료했습니다.  
+이후 Respawn 등 남은 영역도 같은 기준으로 필요한 코드만 선별해 추가할 예정입니다.
