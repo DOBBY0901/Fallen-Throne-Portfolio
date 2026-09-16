@@ -6,29 +6,44 @@ public class HealHpPercentEffectSO : ItemEffectSO
     [Range(0f, 1f)]
     [SerializeField] private float healHpPercent;
 
-    public override bool Apply(GameObject user)
+    public override bool CanApply(GameObject user)
     {
-        if (user == null)
+        if (!TryGetHealth(user, out PlayerHealth playerHealth))
             return false;
 
-        PlayerHealth playerHealth = user.GetComponent<PlayerHealth>();
-
-        if (playerHealth == null)
+        if (playerHealth.CurrentHP <= 0 ||
+            playerHealth.CurrentHP >= playerHealth.MaxHP)
+        {
             return false;
+        }
 
-        if (playerHealth.CurrentHP <= 0)
-            return false;
+        return GetHealAmount(playerHealth) > 0;
+    }
 
-        if (playerHealth.CurrentHP >= playerHealth.MaxHP)
-            return false;
+    public override void Apply(GameObject user)
+    {
+        if (!TryGetHealth(user, out PlayerHealth playerHealth))
+            return;
 
-        int healAmount =
-            Mathf.RoundToInt(playerHealth.MaxHP * healHpPercent);
+        playerHealth.Heal(GetHealAmount(playerHealth));
+    }
 
-        if (healAmount <= 0)
-            return false;
+    private int GetHealAmount(PlayerHealth playerHealth)
+    {
+        return Mathf.RoundToInt(
+            playerHealth.MaxHP * healHpPercent
+        );
+    }
 
-        playerHealth.Heal(healAmount);
-        return true;
+    private static bool TryGetHealth(
+        GameObject user,
+        out PlayerHealth playerHealth)
+    {
+        playerHealth =
+            user != null
+                ? user.GetComponent<PlayerHealth>()
+                : null;
+
+        return playerHealth != null;
     }
 }
