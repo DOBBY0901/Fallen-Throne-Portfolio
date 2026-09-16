@@ -22,9 +22,14 @@ public class EnemyHealth : MonoBehaviour
     private Animator animator;
     private Collider[] colliders;
 
-    private static readonly int DieHash = Animator.StringToHash("Die");
-    private static readonly int AttackHash = Animator.StringToHash("Attack");
-    private static readonly int HitHash = Animator.StringToHash("Hit");
+    private static readonly int DieHash =
+        Animator.StringToHash("Die");
+
+    private static readonly int AttackHash =
+        Animator.StringToHash("Attack");
+
+    private static readonly int HitHash =
+        Animator.StringToHash("Hit");
 
     public int CurrentHp => currentHp;
     public int MaxHp => maxHp;
@@ -35,29 +40,47 @@ public class EnemyHealth : MonoBehaviour
     {
         currentHp = maxHp;
 
-        hitReaction = GetComponent<EnemyHitReaction>();
-        combatAI = GetComponent<EnemyCombatAI>();
-        animator = GetComponentInChildren<Animator>();
-        colliders = GetComponentsInChildren<Collider>();
+        hitReaction =
+            GetComponent<EnemyHitReaction>();
+
+        combatAI =
+            GetComponent<EnemyCombatAI>();
+
+        animator =
+            GetComponentInChildren<Animator>();
+
+        colliders =
+            GetComponentsInChildren<Collider>();
     }
 
     private void Start()
     {
-        OnHpChanged?.Invoke(currentHp, maxHp);
+        OnHpChanged?.Invoke(
+            currentHp,
+            maxHp
+        );
     }
 
     public void TakeDamage(
         int damage,
-        Vector3 attackerPosition,
         Transform attacker)
     {
         if (isDead || damage <= 0)
             return;
 
-        currentHp = Mathf.Clamp(currentHp - damage, 0, maxHp);
+        currentHp =
+            Mathf.Clamp(
+                currentHp - damage,
+                0,
+                maxHp
+            );
 
         hitReaction?.PlayHitFeedback();
-        OnHpChanged?.Invoke(currentHp, maxHp);
+
+        OnHpChanged?.Invoke(
+            currentHp,
+            maxHp
+        );
 
         combatAI?.OnDamage(attacker);
 
@@ -74,30 +97,43 @@ public class EnemyHealth : MonoBehaviour
 
         combatAI?.Die();
 
-        GetComponent<EnemyDropToInventory>()?.DropOnce();
+        GetComponent<
+            EnemyDropToInventory
+        >()?.DropOnce();
 
         PlayDeathSfx();
 
         if (animator != null)
         {
-            animator.ResetTrigger(AttackHash);
-            animator.ResetTrigger(HitHash);
-            animator.SetTrigger(DieHash);
+            animator.ResetTrigger(
+                AttackHash
+            );
+
+            animator.ResetTrigger(
+                HitHash
+            );
+
+            animator.SetTrigger(
+                DieHash
+            );
         }
 
         if (hitReaction != null)
             hitReaction.enabled = false;
 
-        foreach (Collider enemyCollider in colliders)
+        foreach (Collider enemyCollider
+                 in colliders)
         {
             if (enemyCollider != null)
                 enemyCollider.enabled = false;
         }
 
-        if (MinimapEnemyIconManager.Instance != null)
-            MinimapEnemyIconManager.Instance.UnregisterEnemy(transform);
+        MinimapEnemyIconManager.Instance
+            ?.UnregisterEnemy(transform);
 
-        StartCoroutine(DespawnRoutine());
+        StartCoroutine(
+            DespawnRoutine()
+        );
     }
 
     private void PlayDeathSfx()
@@ -105,16 +141,20 @@ public class EnemyHealth : MonoBehaviour
         if (deathSfx == null)
             return;
 
-        AudioManager.Instance?.Play3DSfx(
-            deathSfx,
-            transform.position,
-            deathVolume
-        );
+        AudioManager.Instance
+            ?.Play3DSfx(
+                deathSfx,
+                transform.position,
+                deathVolume
+            );
     }
 
     private IEnumerator DespawnRoutine()
     {
-        yield return new WaitForSeconds(despawnDelay);
+        yield return new WaitForSeconds(
+            despawnDelay
+        );
+
         Destroy(gameObject);
     }
 }
