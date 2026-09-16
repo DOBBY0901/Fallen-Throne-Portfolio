@@ -28,9 +28,12 @@ public class MenuManager : MonoBehaviour
     [SerializeField] private bool pauseTime = true;
 
     private PlayerInput playerInput;
+    private bool isDeathState;
 
     public bool IsOpen =>
         menuRoot != null && menuRoot.activeSelf;
+
+    public bool IsDeathState => isDeathState;
 
     public MenuTab CurrentTab { get; private set; }
 
@@ -40,28 +43,42 @@ public class MenuManager : MonoBehaviour
             menuRoot.SetActive(false);
 
         playerInput = FindFirstObjectByType<PlayerInput>();
+        SetCursorForMenu(false);
+    }
 
-        Cursor.visible = false;
-        Cursor.lockState = CursorLockMode.Locked;
+    private void LateUpdate()
+    {
+        if (!isDeathState)
+            return;
+
+        Cursor.visible = true;
+        Cursor.lockState = CursorLockMode.None;
+        Time.timeScale = 0f;
     }
 
     public void ToggleInventory()
     {
-        ToggleTab(MenuTab.Inventory);
+        if (!isDeathState)
+            ToggleTab(MenuTab.Inventory);
     }
 
     public void ToggleEquipment()
     {
-        ToggleTab(MenuTab.Equipment);
+        if (!isDeathState)
+            ToggleTab(MenuTab.Equipment);
     }
 
     public void ToggleSettings()
     {
-        ToggleTab(MenuTab.Settings);
+        if (!isDeathState)
+            ToggleTab(MenuTab.Settings);
     }
 
     public void EscAction()
     {
+        if (isDeathState)
+            return;
+
         if (IsOpen)
             CloseMenu();
         else
@@ -70,7 +87,43 @@ public class MenuManager : MonoBehaviour
 
     public void Resume()
     {
-        CloseMenu();
+        if (!isDeathState)
+            CloseMenu();
+    }
+
+    public void EnterDeathState()
+    {
+        isDeathState = true;
+
+        ForceCloseMenuUI();
+
+        minimap?.SetActive(false);
+        bossHpUI?.Hide();
+        interactionUIManager?.HideAll();
+
+        SetPlayerControl(false);
+
+        Cursor.visible = true;
+        Cursor.lockState = CursorLockMode.None;
+        Time.timeScale = 0f;
+    }
+
+    public void ExitDeathState()
+    {
+        isDeathState = false;
+
+        ForceCloseMenuUI();
+
+        minimap?.SetActive(true);
+
+        if (bossHpUI != null && bossHpUI.IsBossFightActive)
+            bossHpUI.Show();
+
+        interactionUIManager?.ShowAll();
+
+        SetPlayerControl(true);
+        SetCursorForMenu(false);
+        Time.timeScale = 1f;
     }
 
     public void QuitGame()
@@ -84,6 +137,9 @@ public class MenuManager : MonoBehaviour
 
     private void ToggleTab(MenuTab tab)
     {
+        if (isDeathState)
+            return;
+
         if (!IsOpen)
         {
             OpenMenu(tab);
@@ -101,14 +157,12 @@ public class MenuManager : MonoBehaviour
 
     private void OpenMenu(MenuTab tab)
     {
-        if (menuRoot == null)
+        if (isDeathState || menuRoot == null)
             return;
 
         menuRoot.SetActive(true);
 
-        if (minimap != null)
-            minimap.SetActive(false);
-
+        minimap?.SetActive(false);
         bossHpUI?.Hide();
         interactionUIManager?.HideAll();
 
@@ -122,13 +176,12 @@ public class MenuManager : MonoBehaviour
 
     private void CloseMenu()
     {
-        if (menuRoot == null)
+        if (isDeathState || menuRoot == null)
             return;
 
-        menuRoot.SetActive(false);
+        ForceCloseMenuUI();
 
-        if (minimap != null)
-            minimap.SetActive(true);
+        minimap?.SetActive(true);
 
         if (bossHpUI != null && bossHpUI.IsBossFightActive)
             bossHpUI.Show();
@@ -142,18 +195,21 @@ public class MenuManager : MonoBehaviour
             Time.timeScale = 1f;
     }
 
+    private void ForceCloseMenuUI()
+    {
+        menuRoot?.SetActive(false);
+        inventoryPanel?.SetActive(false);
+        equipmentPanel?.SetActive(false);
+        settingsPanel?.SetActive(false);
+    }
+
     private void SwitchTab(MenuTab tab)
     {
         CurrentTab = tab;
 
-        if (inventoryPanel != null)
-            inventoryPanel.SetActive(tab == MenuTab.Inventory);
-
-        if (equipmentPanel != null)
-            equipmentPanel.SetActive(tab == MenuTab.Equipment);
-
-        if (settingsPanel != null)
-            settingsPanel.SetActive(tab == MenuTab.Settings);
+        inventoryPanel?.SetActive(tab == MenuTab.Inventory);
+        equipmentPanel?.SetActive(tab == MenuTab.Equipment);
+        settingsPanel?.SetActive(tab == MenuTab.Settings);
     }
 
     private void SetPlayerControl(bool enabled)
