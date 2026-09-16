@@ -23,18 +23,29 @@ public class PlayerHitReaction : MonoBehaviour
     private void Awake()
     {
         if (animator == null)
-            animator = GetComponentInChildren<Animator>();
+        {
+            animator =
+                GetComponentInChildren<Animator>();
+        }
 
         if (vfxPoint == null)
             vfxPoint = transform;
 
-        hitHash = Animator.StringToHash(hitTriggerName);
+        hitHash =
+            Animator.StringToHash(
+                hitTriggerName
+            );
     }
 
-    public void PlayHitFeedback(Vector3 attackerPosition)
+    public void PlayHitFeedback()
     {
-        if (animator != null && !string.IsNullOrEmpty(hitTriggerName))
+        if (animator != null &&
+            !string.IsNullOrEmpty(
+                hitTriggerName
+            ))
+        {
             animator.SetTrigger(hitHash);
+        }
 
         if (hitVfxPrefab != null)
         {
@@ -47,15 +58,17 @@ public class PlayerHitReaction : MonoBehaviour
             Destroy(vfx, 2f);
         }
 
-        if (hitSfx != null && hitSfx.Length > 0)
+        if (hitSfx != null &&
+            hitSfx.Length > 0)
         {
-            AudioManager.Instance?.PlayRandom3DSfx(
-                hitSfx,
-                transform.position,
-                hitVolume,
-                pitchMin,
-                pitchMax
-            );
+            AudioManager.Instance
+                ?.PlayRandom3DSfx(
+                    hitSfx,
+                    transform.position,
+                    hitVolume,
+                    pitchMin,
+                    pitchMax
+                );
         }
     }
 }
