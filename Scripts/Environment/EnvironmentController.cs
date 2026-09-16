@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using StarterAssets;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -11,6 +12,20 @@ public class EnvironmentController : MonoBehaviour
         Cave,
         StrongBlizzard,
         Castle
+    }
+
+    private struct ActiveZone
+    {
+        public EnvironmentZone zone;
+        public EnvironmentState state;
+
+        public ActiveZone(
+            EnvironmentZone zone,
+            EnvironmentState state)
+        {
+            this.zone = zone;
+            this.state = state;
+        }
     }
 
     [Header("Current State")]
@@ -56,6 +71,9 @@ public class EnvironmentController : MonoBehaviour
 
     public EnvironmentState CurrentState => currentState;
 
+    private readonly List<ActiveZone> activeZones =
+        new List<ActiveZone>();
+
     private Coroutine fogCoroutine;
     private Coroutine lightCoroutine;
 
@@ -78,10 +96,52 @@ public class EnvironmentController : MonoBehaviour
         ApplyState(currentState);
     }
 
+    public void EnterZone(
+        EnvironmentZone zone,
+        EnvironmentState state)
+    {
+        if (zone == null)
+            return;
+
+        RemoveActiveZone(zone);
+        activeZones.Add(
+            new ActiveZone(zone, state)
+        );
+
+        SetEnvironmentState(state);
+    }
+
+    public void ExitZone(EnvironmentZone zone)
+    {
+        if (zone == null)
+            return;
+
+        RemoveActiveZone(zone);
+
+        EnvironmentState nextState =
+            activeZones.Count > 0
+                ? activeZones[activeZones.Count - 1].state
+                : EnvironmentState.Normal;
+
+        SetEnvironmentState(nextState);
+    }
+
     public void ForceApplyState(EnvironmentState state)
     {
+        // 순간이동/리스폰 시 이전 Trigger 기록이 남지 않도록 초기화한다.
+        activeZones.Clear();
+
         currentState = state;
         ApplyState(currentState);
+    }
+
+    private void RemoveActiveZone(EnvironmentZone zone)
+    {
+        for (int i = activeZones.Count - 1; i >= 0; i--)
+        {
+            if (activeZones[i].zone == zone)
+                activeZones.RemoveAt(i);
+        }
     }
 
     private void ApplyState(EnvironmentState state)
@@ -125,7 +185,9 @@ public class EnvironmentController : MonoBehaviour
                 ? strongBlizzardMoveSpeedMultiplier
                 : normalMoveSpeedMultiplier;
 
-        playerController.SetEnvironmentMoveMultiplier(multiplier);
+        playerController.SetEnvironmentMoveMultiplier(
+            multiplier
+        );
     }
 
     private void UpdateAmbientAudio(EnvironmentState state)
@@ -145,10 +207,17 @@ public class EnvironmentController : MonoBehaviour
 
         float targetDensity = state switch
         {
-            EnvironmentState.Cave => caveFogDensity,
-            EnvironmentState.Castle => caveFogDensity,
-            EnvironmentState.StrongBlizzard => strongBlizzardFogDensity,
-            _ => defaultFogDensity
+            EnvironmentState.Cave =>
+                caveFogDensity,
+
+            EnvironmentState.Castle =>
+                caveFogDensity,
+
+            EnvironmentState.StrongBlizzard =>
+                strongBlizzardFogDensity,
+
+            _ =>
+                defaultFogDensity
         };
 
         StartFogTransition(targetDensity);
@@ -157,44 +226,41 @@ public class EnvironmentController : MonoBehaviour
     private void UpdateLighting(EnvironmentState state)
     {
         if (lightCoroutine != null)
+        {
             StopCoroutine(lightCoroutine);
+            lightCoroutine = null;
+        }
 
         switch (state)
         {
             case EnvironmentState.Cave:
-                lightCoroutine = StartCoroutine(
-                    LightTransition(
-                        caveSunIntensity,
-                        caveAmbientIntensity,
-                        caveReflectionIntensity,
-                        caveAmbientColor,
-                        AmbientMode.Flat
-                    )
+                StartLightTransition(
+                    caveSunIntensity,
+                    caveAmbientIntensity,
+                    caveReflectionIntensity,
+                    caveAmbientColor,
+                    AmbientMode.Flat
                 );
                 break;
 
             case EnvironmentState.Castle:
-                lightCoroutine = StartCoroutine(
-                    LightTransition(
-                        castleSunIntensity,
-                        castleAmbientIntensity,
-                        castleReflectionIntensity,
-                        castleAmbientColor,
-                        AmbientMode.Flat
-                    )
+                StartLightTransition(
+                    castleSunIntensity,
+                    castleAmbientIntensity,
+                    castleReflectionIntensity,
+                    castleAmbientColor,
+                    AmbientMode.Flat
                 );
                 break;
 
             case EnvironmentState.Normal:
             case EnvironmentState.StrongBlizzard:
-                lightCoroutine = StartCoroutine(
-                    LightTransition(
-                        normalSunIntensity,
-                        normalAmbientIntensity,
-                        normalReflectionIntensity,
-                        normalAmbientColor,
-                        AmbientMode.Skybox
-                    )
+                StartLightTransition(
+                    normalSunIntensity,
+                    normalAmbientIntensity,
+                    normalReflectionIntensity,
+                    normalAmbientColor,
+                    AmbientMode.Skybox
                 );
                 break;
         }
@@ -203,20 +269,39 @@ public class EnvironmentController : MonoBehaviour
     private void StartFogTransition(float targetDensity)
     {
         if (fogCoroutine != null)
+        {
             StopCoroutine(fogCoroutine);
+            fogCoroutine = null;
+        }
+
+        if (fogLerpSpeed <= 0f)
+        {
+            RenderSettings.fogDensity =
+                targetDensity;
+
+            return;
+        }
 
         fogCoroutine =
-            StartCoroutine(FogDensityTransition(targetDensity));
+            StartCoroutine(
+                FogDensityTransition(
+                    targetDensity
+                )
+            );
     }
 
-    private IEnumerator FogDensityTransition(float targetDensity)
+    private IEnumerator FogDensityTransition(
+        float targetDensity)
     {
-        float startDensity = RenderSettings.fogDensity;
+        float startDensity =
+            RenderSettings.fogDensity;
+
         float t = 0f;
 
         while (t < 1f)
         {
-            t += Time.deltaTime * fogLerpSpeed;
+            t += Time.deltaTime *
+                fogLerpSpeed;
 
             RenderSettings.fogDensity =
                 Mathf.Lerp(
@@ -228,8 +313,42 @@ public class EnvironmentController : MonoBehaviour
             yield return null;
         }
 
-        RenderSettings.fogDensity = targetDensity;
+        RenderSettings.fogDensity =
+            targetDensity;
+
         fogCoroutine = null;
+    }
+
+    private void StartLightTransition(
+        float targetSunIntensity,
+        float targetAmbientIntensity,
+        float targetReflectionIntensity,
+        Color targetAmbientColor,
+        AmbientMode targetAmbientMode)
+    {
+        if (lightLerpSpeed <= 0f)
+        {
+            ApplyLightingImmediately(
+                targetSunIntensity,
+                targetAmbientIntensity,
+                targetReflectionIntensity,
+                targetAmbientColor,
+                targetAmbientMode
+            );
+
+            return;
+        }
+
+        lightCoroutine =
+            StartCoroutine(
+                LightTransition(
+                    targetSunIntensity,
+                    targetAmbientIntensity,
+                    targetReflectionIntensity,
+                    targetAmbientColor,
+                    targetAmbientMode
+                )
+            );
     }
 
     private IEnumerator LightTransition(
@@ -240,7 +359,9 @@ public class EnvironmentController : MonoBehaviour
         AmbientMode targetAmbientMode)
     {
         float startSunIntensity =
-            sunLight != null ? sunLight.intensity : 0f;
+            sunLight != null
+                ? sunLight.intensity
+                : 0f;
 
         float startAmbientIntensity =
             RenderSettings.ambientIntensity;
@@ -255,8 +376,11 @@ public class EnvironmentController : MonoBehaviour
 
         while (t < 1f)
         {
-            t += Time.deltaTime * lightLerpSpeed;
-            float progress = Mathf.Clamp01(t);
+            t += Time.deltaTime *
+                lightLerpSpeed;
+
+            float progress =
+                Mathf.Clamp01(t);
 
             if (sunLight != null)
             {
@@ -292,25 +416,42 @@ public class EnvironmentController : MonoBehaviour
             yield return null;
         }
 
-        if (sunLight != null)
-            sunLight.intensity = targetSunIntensity;
-
-        RenderSettings.ambientIntensity =
-            targetAmbientIntensity;
-
-        RenderSettings.reflectionIntensity =
-            targetReflectionIntensity;
-
-        RenderSettings.ambientLight =
-            targetAmbientColor;
-
-        RenderSettings.ambientMode =
-            targetAmbientMode;
+        ApplyLightingImmediately(
+            targetSunIntensity,
+            targetAmbientIntensity,
+            targetReflectionIntensity,
+            targetAmbientColor,
+            targetAmbientMode
+        );
 
         lightCoroutine = null;
     }
 
-    private static void PlayParticle(ParticleSystem particle)
+    private void ApplyLightingImmediately(
+        float sunIntensity,
+        float ambientIntensity,
+        float reflectionIntensity,
+        Color ambientColor,
+        AmbientMode ambientMode)
+    {
+        if (sunLight != null)
+            sunLight.intensity = sunIntensity;
+
+        RenderSettings.ambientIntensity =
+            ambientIntensity;
+
+        RenderSettings.reflectionIntensity =
+            reflectionIntensity;
+
+        RenderSettings.ambientLight =
+            ambientColor;
+
+        RenderSettings.ambientMode =
+            ambientMode;
+    }
+
+    private static void PlayParticle(
+        ParticleSystem particle)
     {
         if (particle == null)
             return;
@@ -322,7 +463,8 @@ public class EnvironmentController : MonoBehaviour
         particle.Play();
     }
 
-    private static void StopParticle(ParticleSystem particle)
+    private static void StopParticle(
+        ParticleSystem particle)
     {
         if (particle == null)
             return;
