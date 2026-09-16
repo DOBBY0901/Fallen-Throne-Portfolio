@@ -13,7 +13,9 @@ ChestInteractable
    ├─ InteractionUIManager
    ├─ Animation / Light / SFX
    ├─ DropTableSO → Inventory
-   └─ TrapManager
+   └─ TrapManager.StopAllTraps()
+              ↓
+          FlameTrap
 ```
 
 ## Files
@@ -21,6 +23,9 @@ ChestInteractable
 ### Core
 - **IInteractable.cs** — 상호작용 대상이 공통으로 구현하는 최소 계약
 - **ChestInteractable.cs** — 거리 기반 상호작용 등록, UI 프롬프트, 상자 연출, 드롭, 트랩 종료까지 하나의 상호작용 흐름으로 연결
+
+## Related System
+- [**Trap System**](../Trap/README.md) — 상자 보상 획득 후 TrapManager를 통해 FlameTrap을 일괄 종료
 
 ## Review Points
 
@@ -30,3 +35,4 @@ ChestInteractable
 - 상자 오픈 연출과 실제 보상 지급 시점을 Coroutine으로 순서화
 - DropTableSO와 Inventory를 재사용해 상자 전용 아이템 로직을 별도로 만들지 않음
 - 동일 상자의 중복 보상 지급을 방지
+- 상호작용 결과가 TrapManager 같은 다른 월드 시스템으로 이어질 수 있도록 구성
