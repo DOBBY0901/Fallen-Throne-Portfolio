@@ -10,11 +10,11 @@ public class PlayerHealth : MonoBehaviour
 
     [Header("Death")]
     [SerializeField] private AudioClip deathSfx;
+
     [Range(0f, 1f)]
     [SerializeField] private float deathVolume = 0.9f;
 
     [Header("References")]
-    [SerializeField] private EnvironmentController environment;
     [SerializeField] private GameObject deathPanel;
     [SerializeField] private PlayerInput playerInput;
     [SerializeField] private PlayerStats playerStats;
@@ -26,11 +26,16 @@ public class PlayerHealth : MonoBehaviour
 
     private bool isDead;
 
-    private static readonly int DieHash = Animator.StringToHash("Die");
+    private static readonly int DieHash =
+        Animator.StringToHash("Die");
 
     public int CurrentHP { get; private set; }
     public int MaxHP => maxHP;
-    public float NormalizedHP => maxHP <= 0 ? 0f : (float)CurrentHP / maxHP;
+
+    public float NormalizedHP =>
+        maxHP <= 0
+            ? 0f
+            : (float)CurrentHP / maxHP;
 
     public event Action<int, int> OnHpChanged;
 
@@ -52,7 +57,6 @@ public class PlayerHealth : MonoBehaviour
 
     private void Start()
     {
-        // UI가 구독을 완료한 뒤 초기 체력 값을 전달한다.
         OnHpChanged?.Invoke(CurrentHP, maxHP);
     }
 
@@ -61,7 +65,9 @@ public class PlayerHealth : MonoBehaviour
         if (isDead || amount <= 0)
             return;
 
-        CurrentHP = Mathf.Clamp(CurrentHP + amount, 0, maxHP);
+        CurrentHP =
+            Mathf.Clamp(CurrentHP + amount, 0, maxHP);
+
         OnHpChanged?.Invoke(CurrentHP, maxHP);
     }
 
@@ -70,17 +76,20 @@ public class PlayerHealth : MonoBehaviour
         if (isDead)
             return false;
 
-        // 회피 중에는 피해를 받지 않는다.
         if (controller != null && controller._isRolling)
             return false;
 
-        int defenseReduction = playerStats != null
-            ? playerStats.DamageReductionFromDefense
-            : 0;
+        int defenseReduction =
+            playerStats != null
+                ? playerStats.DamageReductionFromDefense
+                : 0;
 
-        int finalDamage = Mathf.Max(1, damage - defenseReduction);
+        int finalDamage =
+            Mathf.Max(1, damage - defenseReduction);
 
-        CurrentHP = Mathf.Clamp(CurrentHP - finalDamage, 0, maxHP);
+        CurrentHP =
+            Mathf.Clamp(CurrentHP - finalDamage, 0, maxHP);
+
         OnHpChanged?.Invoke(CurrentHP, maxHP);
 
         if (CurrentHP <= 0)
@@ -131,13 +140,16 @@ public class PlayerHealth : MonoBehaviour
 
     public void Respawn()
     {
-        RespawnManager respawnManager = RespawnManager.Instance;
+        RespawnManager respawnManager =
+            RespawnManager.Instance;
+
         if (respawnManager == null)
             return;
 
         Time.timeScale = 1f;
 
-        CharacterController characterController = GetComponent<CharacterController>();
+        CharacterController characterController =
+            GetComponent<CharacterController>();
 
         if (characterController != null)
             characterController.enabled = false;
@@ -149,12 +161,7 @@ public class PlayerHealth : MonoBehaviour
 
         Physics.SyncTransforms();
 
-        if (environment != null)
-        {
-            environment.ForceApplyState(
-                respawnManager.GetRespawnEnvironmentState()
-            );
-        }
+        respawnManager.ApplyRespawnEnvironment();
 
         if (characterController != null)
             characterController.enabled = true;
