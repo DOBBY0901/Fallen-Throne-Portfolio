@@ -16,7 +16,8 @@ public class Inventory : MonoBehaviour
             string.IsNullOrEmpty(id) || count <= 0;
     }
 
-    [SerializeField] private Slot[] slots = new Slot[SlotCount];
+    [SerializeField] private Slot[] slots =
+        new Slot[SlotCount];
 
     public IReadOnlyList<Slot> Slots => slots;
 
@@ -49,40 +50,102 @@ public class Inventory : MonoBehaviour
         if (data == null)
             return false;
 
-        // 전체 수량을 담을 공간이 없으면 인벤토리를 변경하지 않는다.
-        if (GetAvailableCapacity(data) < amount)
+        if (!CanAddToSlots(slots, data, amount))
             return false;
 
-        int remaining = amount;
-
-        if (data.Stackable)
-            remaining = FillExistingStacks(data, remaining);
-
-        if (remaining > 0)
-            FillEmptySlots(data, remaining);
-
+        AddToSlots(slots, data, amount);
         OnChanged?.Invoke();
+
+        return true;
+    }
+
+    public bool CanAddItems(
+        IReadOnlyList<(ItemDataSO data, int amount)> items)
+    {
+        if (items == null)
+            return false;
+
+        Slot[] simulatedSlots =
+            (Slot[])slots.Clone();
+
+        for (int i = 0; i < items.Count; i++)
+        {
+            ItemDataSO data = items[i].data;
+            int amount = items[i].amount;
+
+            if (data == null || amount <= 0)
+                continue;
+
+            if (!CanAddToSlots(
+                    simulatedSlots,
+                    data,
+                    amount))
+            {
+                return false;
+            }
+
+            AddToSlots(
+                simulatedSlots,
+                data,
+                amount
+            );
+        }
+
+        return true;
+    }
+
+    public bool AddItems(
+        IReadOnlyList<(ItemDataSO data, int amount)> items)
+    {
+        if (!CanAddItems(items))
+            return false;
+
+        bool changed = false;
+
+        for (int i = 0; i < items.Count; i++)
+        {
+            ItemDataSO data = items[i].data;
+            int amount = items[i].amount;
+
+            if (data == null || amount <= 0)
+                continue;
+
+            AddToSlots(slots, data, amount);
+            changed = true;
+        }
+
+        if (changed)
+            OnChanged?.Invoke();
+
         return true;
     }
 
     public bool RemoveItem(string id, int amount)
     {
-        if (string.IsNullOrWhiteSpace(id) || amount <= 0)
+        if (string.IsNullOrWhiteSpace(id) ||
+            amount <= 0)
+        {
             return false;
+        }
 
-        // 일부만 제거되는 상황을 방지한다.
         if (GetTotalCount(id) < amount)
             return false;
 
         int remaining = amount;
         bool needsCompaction = false;
 
-        for (int i = 0; i < slots.Length && remaining > 0; i++)
+        for (int i = 0;
+             i < slots.Length && remaining > 0;
+             i++)
         {
-            if (slots[i].IsEmpty || slots[i].id != id)
+            if (slots[i].IsEmpty ||
+                slots[i].id != id)
+            {
                 continue;
+            }
 
-            int take = Mathf.Min(slots[i].count, remaining);
+            int take =
+                Mathf.Min(slots[i].count, remaining);
 
             slots[i].count -= take;
             remaining -= take;
@@ -115,97 +178,127 @@ public class Inventory : MonoBehaviour
 
         for (int i = 0; i < slots.Length; i++)
         {
-            if (!slots[i].IsEmpty && slots[i].id == id)
+            if (!slots[i].IsEmpty &&
+                slots[i].id == id)
+            {
                 total += slots[i].count;
+            }
         }
 
         return total;
     }
 
-    private int FillExistingStacks(
-        ItemDataSO data,
-        int remaining)
-    {
-        for (int i = 0; i < slots.Length && remaining > 0; i++)
-        {
-            if (slots[i].IsEmpty || slots[i].id != data.Id)
-                continue;
-
-            int space = data.MaxStack - slots[i].count;
-
-            if (space <= 0)
-                continue;
-
-            int add = Mathf.Min(space, remaining);
-
-            slots[i].count += add;
-            remaining -= add;
-        }
-
-        return remaining;
-    }
-
-    private void FillEmptySlots(
+    private static bool CanAddToSlots(
+        Slot[] targetSlots,
         ItemDataSO data,
         int amount)
     {
-        int remaining = amount;
-
-        for (int i = 0; i < slots.Length && remaining > 0; i++)
-        {
-            if (!slots[i].IsEmpty)
-                continue;
-
-            int add = data.Stackable
-                ? Mathf.Min(data.MaxStack, remaining)
-                : 1;
-
-            slots[i].id = data.Id;
-            slots[i].count = add;
-
-            remaining -= add;
-        }
-    }
-
-    private int GetAvailableCapacity(ItemDataSO data)
-    {
         int capacity = 0;
 
-        for (int i = 0; i < slots.Length; i++)
+        for (int i = 0; i < targetSlots.Length; i++)
         {
-            if (slots[i].IsEmpty)
+            if (targetSlots[i].IsEmpty)
             {
                 capacity += data.Stackable
                     ? data.MaxStack
                     : 1;
 
+                if (capacity >= amount)
+                    return true;
+
                 continue;
             }
 
-            if (data.Stackable && slots[i].id == data.Id)
+            if (data.Stackable &&
+                targetSlots[i].id == data.Id)
             {
                 capacity += Mathf.Max(
                     0,
-                    data.MaxStack - slots[i].count
+                    data.MaxStack -
+                    targetSlots[i].count
                 );
+
+                if (capacity >= amount)
+                    return true;
             }
         }
 
-        return capacity;
+        return capacity >= amount;
+    }
+
+    private static void AddToSlots(
+        Slot[] targetSlots,
+        ItemDataSO data,
+        int amount)
+    {
+        int remaining = amount;
+
+        if (data.Stackable)
+        {
+            for (int i = 0;
+                 i < targetSlots.Length &&
+                 remaining > 0;
+                 i++)
+            {
+                if (targetSlots[i].IsEmpty ||
+                    targetSlots[i].id != data.Id)
+                {
+                    continue;
+                }
+
+                int space =
+                    data.MaxStack -
+                    targetSlots[i].count;
+
+                if (space <= 0)
+                    continue;
+
+                int add =
+                    Mathf.Min(space, remaining);
+
+                targetSlots[i].count += add;
+                remaining -= add;
+            }
+        }
+
+        for (int i = 0;
+             i < targetSlots.Length &&
+             remaining > 0;
+             i++)
+        {
+            if (!targetSlots[i].IsEmpty)
+                continue;
+
+            int add = data.Stackable
+                ? Mathf.Min(
+                    data.MaxStack,
+                    remaining
+                )
+                : 1;
+
+            targetSlots[i].id = data.Id;
+            targetSlots[i].count = add;
+
+            remaining -= add;
+        }
     }
 
     private void CompactSlots()
     {
         int writeIndex = 0;
 
-        for (int readIndex = 0; readIndex < slots.Length; readIndex++)
+        for (int readIndex = 0;
+             readIndex < slots.Length;
+             readIndex++)
         {
             if (slots[readIndex].IsEmpty)
                 continue;
 
             if (readIndex != writeIndex)
             {
-                slots[writeIndex] = slots[readIndex];
+                slots[writeIndex] =
+                    slots[readIndex];
+
                 ClearSlot(readIndex);
             }
 
@@ -221,15 +314,28 @@ public class Inventory : MonoBehaviour
 
     private void EnsureSlotArray()
     {
-        if (slots != null && slots.Length == SlotCount)
+        if (slots != null &&
+            slots.Length == SlotCount)
+        {
             return;
+        }
 
-        Slot[] resized = new Slot[SlotCount];
+        Slot[] resized =
+            new Slot[SlotCount];
 
         if (slots != null)
         {
-            int copyCount = Mathf.Min(slots.Length, SlotCount);
-            Array.Copy(slots, resized, copyCount);
+            int copyCount =
+                Mathf.Min(
+                    slots.Length,
+                    SlotCount
+                );
+
+            Array.Copy(
+                slots,
+                resized,
+                copyCount
+            );
         }
 
         slots = resized;
