@@ -3,7 +3,6 @@ using UnityEngine;
 public class EnemyDropToInventory : MonoBehaviour
 {
     [SerializeField] private DropTableSO dropTable;
-    [SerializeField] private ItemDatabaseSO database;
     [SerializeField] private Inventory inventory;
 
     private bool hasDropped;
@@ -15,10 +14,7 @@ public class EnemyDropToInventory : MonoBehaviour
 
     public void DropOnce()
     {
-        if (hasDropped)
-            return;
-
-        if (dropTable == null || database == null)
+        if (hasDropped || dropTable == null)
             return;
 
         ResolveInventory();
@@ -30,17 +26,9 @@ public class EnemyDropToInventory : MonoBehaviour
 
         var rolledItems = dropTable.Roll();
 
-        foreach (var (data, amount) in rolledItems)
-        {
-            if (data == null || amount <= 0)
-                continue;
-
-            inventory.AddItem(
-                database,
-                data.Id,
-                amount
-            );
-        }
+        // Auto-loot 방식의 포트폴리오 샘플이다.
+        // 전체 보상을 담을 수 없으면 부분 지급하지 않는다.
+        inventory.AddItems(rolledItems);
     }
 
     private void ResolveInventory()
@@ -48,8 +36,9 @@ public class EnemyDropToInventory : MonoBehaviour
         if (inventory != null)
             return;
 
-        inventory = FindFirstObjectByType<Inventory>(
-            FindObjectsInactive.Include
-        );
+        inventory =
+            FindFirstObjectByType<Inventory>(
+                FindObjectsInactive.Include
+            );
     }
 }
