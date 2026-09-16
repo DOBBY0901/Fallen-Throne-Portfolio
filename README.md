@@ -17,11 +17,12 @@
 
 ## Start Here
 
-코드 전체를 순서대로 볼 필요 없이 아래 세 영역부터 확인할 수 있습니다.
+코드 전체를 순서대로 볼 필요 없이 아래 영역부터 확인할 수 있습니다.
 
 - [**Player Combat**](Scripts/Player/README.md) — 3단 콤보, 공격 판정, 체력/사망/리스폰, 능력치, 상태이상
 - [**Enemy AI**](Scripts/Enemy/README.md) — NavMesh 순찰, 시야 탐지, Chase/Attack 상태 전환, 인카운터
 - [**Boss System**](Scripts/Boss/README.md) — 기본 공격, HP Threshold 패턴, Slam/Rockfall, Flame Phase
+- [**Item System**](Scripts/Item/README.md) — ScriptableObject 데이터, ID Database, 사용 효과, Drop Table
 
 ## Core Implementation
 
@@ -77,6 +78,21 @@ BossPatternController
 - 2페이즈 진입 시 보스 머티리얼과 전투 맵 전환
 - Flame Phase에서 공격 효과와 낙석 패턴 변화
 
+### Item System
+
+```text
+ItemDataSO
+  ├─ ItemDatabaseSO
+  ├─ ItemEffectSO → ItemEffectRunner
+  └─ DropTableSO → Inventory
+```
+
+- ScriptableObject 기반 아이템 데이터 정의
+- 문자열 ID → Dictionary 캐시 기반 빠른 데이터 조회
+- 추상 `ItemEffectSO`를 통한 사용 효과 확장
+- 한 아이템에 여러 사용 효과를 조합할 수 있는 구조
+- 확률/수량 기반 Drop Table과 Inventory 연계
+
 ## Selected Code
 
 ### Player
@@ -101,6 +117,15 @@ BossPatternController
 - [BossSlamAttack.cs](Scripts/Boss/BossSlamAttack.cs)
 - [BossRockFallPattern.cs](Scripts/Boss/BossRockFallPattern.cs)
 
+### Item
+- [ItemDataSO.cs](Scripts/Item/ItemDataSO.cs)
+- [ItemDatabaseSO.cs](Scripts/Item/ItemDatabaseSO.cs)
+- [ItemEffectSO.cs](Scripts/Item/ItemEffectSO.cs)
+- [ItemEffectRunner.cs](Scripts/Item/ItemEffectRunner.cs)
+- [HealHpPercentEffectSO.cs](Scripts/Item/HealHpPercentEffectSO.cs)
+- [DropTableSO.cs](Scripts/Item/DropTableSO.cs)
+- [EnemyDropToInventory.cs](Scripts/Item/EnemyDropToInventory.cs)
+
 ## Repository Structure
 
 ```text
@@ -109,25 +134,16 @@ Fallen-Throne-Portfolio/
 └─ Scripts/
    ├─ Player/
    │  ├─ README.md
-   │  ├─ PlayerCombat.cs
-   │  ├─ PlayerAttackHit.cs
-   │  ├─ PlayerHealth.cs
-   │  ├─ PlayerStats.cs
-   │  ├─ PlayerStatusEffect.cs
-   │  └─ Support Scripts
+   │  └─ Combat / Health / Stats / Support
    ├─ Enemy/
    │  ├─ README.md
-   │  ├─ EnemyCombatAI.cs
-   │  ├─ EnemyMove.cs
-   │  ├─ EnemyHealth.cs
-   │  └─ Encounter Scripts
-   └─ Boss/
+   │  └─ AI / Spawn / Encounter
+   ├─ Boss/
+   │  ├─ README.md
+   │  └─ AI / Phase / Pattern / Attack
+   └─ Item/
       ├─ README.md
-      ├─ BossAI.cs
-      ├─ BossHealth.cs
-      ├─ BossPatternController.cs
-      ├─ BossPhaseController.cs
-      └─ Attack / Pattern Scripts
+      └─ Data / Database / Effects / Drop
 ```
 
 ## Repository Notice
@@ -142,5 +158,5 @@ Fallen-Throne-Portfolio/
 
 ## Status
 
-현재 **Player / Enemy / Boss** 핵심 코드 정리를 완료했습니다.  
+현재 **Player / Enemy / Boss / Item** 핵심 코드 정리를 완료했습니다.  
 이후 Inventory, Interaction, Environment, UI 영역도 같은 기준으로 필요한 코드만 선별해 추가할 예정입니다.
